@@ -128,7 +128,7 @@ public class ExportController {
                         } else {
                             newRun.setText(targetText);
                         }
-                        newRun.setFontSize(paragraph.getFontAlignment());
+                        newRun.setFontSize(14);
                         newRun.setFontFamily("Times New Roman");
                         newRun.setBold(run.isBold());
                         newRun.setItalic(run.isItalic());
