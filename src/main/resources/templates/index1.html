@@ -4,19 +4,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>File Upload Form</title>
+    <title>Dịch tài liệu</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
 </head>
 
 <body>
     <div class="container mt-5">
-        <h2 class="mb-4">Upload File</h2>
+        <h2 class="mb-4">Dịch tài liệu</h2>
         <form action="/upload" method="post" enctype="multipart/form-data">
-            <div class="form-group">
-                <label for="fileInput">Choose file</label>
-                <input type="file" class="form-control-file" id="fileInput" name="file" required>
+            <div class="form-group col-md-6">
+                <label for="fileInput">Choose file word (.docx)</label>
+                <input type="file" class="form-control-file" id="fileInput" name="file" accept=".docx" required>
             </div>
-            <button type="submit" class="btn btn-primary">Upload</button>
+            <div class="form-group col-md-6">
+                <label for="language1">Chọn Ngôn Ngữ 1</label>
+                <select id="language1" name="sourceLanguage" class="form-control">
+                    <option value="auto">Tự phát hiện ngôn ngữ</option>
+                    <option value="vi-VN">Tiếng Việt (vi-VN)</option>
+                    <option value="en-US">Tiếng Anh (Hoa Kỳ) (en-US)</option>
+                    <option value="en-GB">Tiếng Anh (Anh) (en-GB)</option>
+                    <option value="ja-JP">Tiếng Nhật (ja-JP)</option>
+                    <option value="es-ES">Tiếng Tây Ban Nha (es-ES)</option>
+                    <option value="fr-FR">Tiếng Pháp (fr-FR)</option>
+                    <option value="de-DE">Tiếng Đức (de-DE)</option>
+                    <option value="it-IT">Tiếng Ý (it-IT)</option>
+                    <option value="ko-KR">Tiếng Hàn (ko-KR)</option>
+                    <option value="zh-CN">Tiếng Trung Quốc (zh-CN)</option>
+                </select>
+            </div>
+
+            <div class="form-group col-md-6">
+                <label for="language2">Chọn Ngôn Ngữ 2</label>
+                <select id="language2" name="targetLanguage" class="form-control">
+                    <option value="vi-VN">Tiếng Việt (vi-VN)</option>
+                    <option value="en-US">Tiếng Anh (Hoa Kỳ) (en-US)</option>
+                    <option value="en-GB">Tiếng Anh (Anh) (en-GB)</option>
+                    <option value="ja-JP">Tiếng Nhật (ja-JP)</option>
+                    <option value="es-ES">Tiếng Tây Ban Nha (es-ES)</option>
+                    <option value="fr-FR">Tiếng Pháp (fr-FR)</option>
+                    <option value="de-DE">Tiếng Đức (de-DE)</option>
+                    <option value="it-IT">Tiếng Ý (it-IT)</option>
+                    <option value="ko-KR">Tiếng Hàn (ko-KR)</option>
+                    <option value="zh-CN">Tiếng Trung Quốc (zh-CN)</option>
+                    <option value="pt-BR">Tiếng Bồ Đào Nha (Brazil) (pt-BR)</option>
+                    <option value="hi-IN">Tiếng Hindi (hi-IN)</option>
+                    <option value="ar-SA">Tiếng Ả Rập (ar-SA)</option>
+                    <option value="ru-RU">Tiếng Nga (ru-RU)</option>
+                    <option value="pl-PL">Tiếng Ba Lan (pl-PL)</option>
+                    <option value="tr-TR">Tiếng Thổ Nhĩ Kỳ (tr-TR)</option>
+                    <option value="sv-SE">Tiếng Thụy Điển (sv-SE)</option>
+                    <option value="no-NO">Tiếng Na Uy (no-NO)</option>
+                    <option value="ms-MY">Tiếng Malay (ms-MY)</option>
+
+                </select>
+                <button type="submit" class="btn btn-primary">Upload</button>
         </form>
     </div>
 

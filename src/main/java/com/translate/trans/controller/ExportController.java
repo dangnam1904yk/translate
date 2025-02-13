@@ -53,6 +53,8 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 import java.io.ByteArrayInputStream;
@@ -95,7 +97,10 @@ public class ExportController {
     }
 
     @PostMapping("/upload")
-    public void exportWord(HttpServletResponse response, @RequestParam("file") MultipartFile file)
+    public void exportWord(HttpServletResponse response,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("sourceLanguage") String sourceLanguage,
+            @RequestParam("targetLanguage") String targetLanguage)
             throws IOException, InvalidFormatException {
         // Đặt header để trình duyệt biết đây là file Word
         response.setContentType("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
@@ -117,11 +122,18 @@ public class ExportController {
                     XWPFParagraph newParagraph = targetDoc.createParagraph();
                     XWPFRun newRun = newParagraph.createRun();
                     String text = run.getText(0);
+
                     if (textParagraph != null && textParagraph.length() > 0) {
+                        String lettersOnly = textParagraph.replaceAll("[^\\p{L}]", "");
+
+                        // Check if remaining string contains only uppercase letters
 
                         newParagraph.setAlignment(paragraph.getAlignment());
                         newParagraph.setIndentationFirstLine(paragraph.getIndentationFirstLine());
-                        String targetText = GoogleTranslate.translate("vi", textParagraph);
+                        String targetText = GoogleTranslate.translate(sourceLanguage, targetLanguage, textParagraph);
+                        if (lettersOnly.matches("\\p{Lu}+")) {
+                            targetText = targetText.toUpperCase();
+                        }
                         if (targetText.length() < MAX_LENGTH) {
                             newRun.setText(targetText);
                             newRun.setText("\n");
