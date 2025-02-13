@@ -100,7 +100,7 @@ public class ExportController {
         // Đặt header để trình duyệt biết đây là file Word
         response.setContentType("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
         response.setHeader("Content-Disposition", "attachment; filename=document.docx");
-
+        long startTime = System.nanoTime();
         try (XWPFDocument sourceDoc = new XWPFDocument(file.getInputStream());
                 XWPFDocument targetDoc = new XWPFDocument();
                 ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -253,6 +253,10 @@ public class ExportController {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        long endTime = System.nanoTime();
+        long duration = (endTime - startTime) / 1_000_000; // Chuyển thành millisecond
+        double minutes = duration / 60000.0; // Chia cho 60,000
+        System.out.println("Time end: " + minutes + " minutes");
     }
 
     @GetMapping("/")
@@ -264,8 +268,8 @@ public class ExportController {
         int widthPx = (int) (widthEMU / Units.EMU_PER_PIXEL);
         int heightPx = (int) (heightEMU / Units.EMU_PER_PIXEL);
 
-        System.out.println("Ảnh: " + picture.getPictureData().getFileName());
-        System.out.println("Kích thước: " + widthPx + " x " + heightPx + " px");
+        System.out.println("Imgae: " + picture.getPictureData().getFileName());
+        System.out.println("Size img: " + widthPx + " x " + heightPx + " px");
     }
 
 }
