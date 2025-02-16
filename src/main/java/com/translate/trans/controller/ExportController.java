@@ -26,6 +26,7 @@ import com.translate.trans.model.Request.GenerationConfig;
 import com.translate.trans.model.Request.Part;
 import com.translate.trans.model.Request.RequestBodySend;
 import com.translate.trans.model.Response.RequestBodyResponse;
+import com.translate.trans.model.error.*;
 import com.translate.trans.service.DocxProcessorService;
 import com.translate.trans.service.ExcelExportService;
 import com.translate.trans.until.Constain;
@@ -192,116 +193,124 @@ public class ExportController {
                                 }
                             }
                             StringBuilder translatedText = new StringBuilder();
-                            if (!fullText.isEmpty()) {
-                                if (typeModel.equals(Constain.GOOGLE_TRANSLATE)) {
-                                    translatedText
-                                            .append(GoogleTranslate.translate(sourceLanguage, targetLanguage,
-                                                    fullText.toString()));
-                                } else {
-                                    HttpClient client = HttpClient.newHttpClient();
-                                    HttpRequest request;
+                            if (!fullText.toString().isEmpty() && fullText.toString().matches(".*\\p{L}.*")) {
 
-                                    Gson gson = new Gson();
-                                    List<Part> parts = Collections.singletonList(new Part(Constain.ASSERT_KEY
-                                            + languageOptionSource.getText() + " sang " + languageOptionTarget.getText()
-                                            + " không cần diễn giải lại yêu cầu của tôi :" + fullText.toString()));
+                                if (!fullText.toString().isEmpty()) {
+                                    if (typeModel.equals(Constain.GOOGLE_TRANSLATE)) {
+                                        translatedText
+                                                .append(GoogleTranslate.translate(sourceLanguage, targetLanguage,
+                                                        fullText.toString()));
+                                    } else {
+                                        HttpClient client = HttpClient.newHttpClient();
+                                        HttpRequest request;
 
-                                    List<ContentText> contents = Collections
-                                            .singletonList(new ContentText(parts, "user"));
-                                    GenerationConfig config = new GenerationConfig(TEMPERATURE, TOP_K, TOP_P,
-                                            MAX_OUT_PUT_TOKENS,
-                                            RESPONSE_MIME_TYPE);
-                                    RequestBodySend requestBody = new RequestBodySend(contents, config);
-                                    gson = new GsonBuilder().setPrettyPrinting().create();
-                                    String bodyData = gson.toJson(requestBody);
+                                        Gson gson = new Gson();
+                                        List<Part> parts = Collections.singletonList(new Part(Constain.ASSERT_KEY
+                                                + languageOptionSource.getText() + " sang "
+                                                + languageOptionTarget.getText()
+                                                + " không cần diễn giải lại yêu cầu của tôi :" + fullText.toString()));
 
-                                    StringBuilder url = new StringBuilder();
-                                    if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_EXP)) {
-                                        url.append(
-                                                URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_EXP
-                                                        + KEY_API_GEMINI);
-                                    }
-                                    if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_THINK_EXP_01_21)) {
-                                        url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_THINK_EXP_01_21
-                                                + KEY_API_GEMINI);
-                                    }
-                                    if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_2_0_PRO_EXP_02_05)) {
-                                        url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_PRO_EXP_02_05
-                                                + KEY_API_GEMINI);
-                                    }
+                                        List<ContentText> contents = Collections
+                                                .singletonList(new ContentText(parts, "user"));
+                                        GenerationConfig config = new GenerationConfig(TEMPERATURE, TOP_K, TOP_P,
+                                                MAX_OUT_PUT_TOKENS,
+                                                RESPONSE_MIME_TYPE);
+                                        RequestBodySend requestBody = new RequestBodySend(contents, config);
+                                        gson = new GsonBuilder().setPrettyPrinting().create();
+                                        String bodyData = gson.toJson(requestBody);
 
-                                    request = HttpRequest.newBuilder()
-                                            .header("Content-Type", "application/json")
-                                            .uri(new URI(url.toString()))
-                                            .POST(HttpRequest.BodyPublishers.ofString(bodyData, StandardCharsets.UTF_8))
-                                            .build();
+                                        StringBuilder url = new StringBuilder();
+                                        if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_EXP)) {
+                                            url.append(
+                                                    URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_EXP
+                                                            + KEY_API_GEMINI);
+                                        }
+                                        if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_THINK_EXP_01_21)) {
+                                            url.append(
+                                                    URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_THINK_EXP_01_21
+                                                            + KEY_API_GEMINI);
+                                        }
+                                        if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_2_0_PRO_EXP_02_05)) {
+                                            url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_PRO_EXP_02_05
+                                                    + KEY_API_GEMINI);
+                                        }
 
-                                    HttpResponse<String> responseData;
-                                    RequestBodyResponse responseGemini = null;
+                                        request = HttpRequest.newBuilder()
+                                                .header("Content-Type", "application/json")
+                                                .uri(new URI(url.toString()))
+                                                .POST(HttpRequest.BodyPublishers.ofString(bodyData,
+                                                        StandardCharsets.UTF_8))
+                                                .build();
 
-                                    while (retryCount < maxRetries) {
-                                        try {
-                                            responseData = client.send(request, HttpResponse.BodyHandlers.ofString());
-                                            if (responseData.body() == null || responseData.body().isEmpty()) {
-                                                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                                        "ERROR  GEMINI");
-                                            }
+                                        HttpResponse<String> responseData;
+                                        RequestBodyResponse responseGemini = null;
 
+                                        while (retryCount < maxRetries) {
                                             try {
-                                                responseGemini = gson.fromJson(responseData.body(),
-                                                        RequestBodyResponse.class);
-                                            } catch (IllegalStateException e) {
-                                                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                                        "ERROR  GEMINI");
-                                            }
-                                            if (responseGemini.getCandidates() != null
-                                                    && !responseGemini.getCandidates().isEmpty()
-                                                    && !responseGemini.getCandidates().get(0).content.getParts()
-                                                            .isEmpty()) {
+                                                responseData = client.send(request,
+                                                        HttpResponse.BodyHandlers.ofString());
+                                                if (responseData.body() == null || responseData.body().isEmpty()) {
+                                                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                                            "ERROR  GEMINI");
+                                                }
 
-                                                break;
-                                            } else {
+                                                try {
+                                                    responseGemini = gson.fromJson(responseData.body(),
+                                                            RequestBodyResponse.class);
+                                                } catch (IllegalStateException e) {
+                                                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                                            "ERROR  GEMINI");
+                                                }
+                                                if (responseGemini.getCandidates() != null
+                                                        && !responseGemini.getCandidates().isEmpty()
+                                                        && !responseGemini.getCandidates().get(0).content.getParts()
+                                                                .isEmpty()) {
+
+                                                    break;
+                                                } else {
+
+                                                    try {
+                                                        Thread.sleep(waitTime);
+                                                    } catch (InterruptedException ex) {
+                                                        Thread.currentThread().interrupt();
+                                                    }
+                                                    retryCount++;
+                                                    waitTime *= 1.3;
+                                                }
+                                                System.out.println("Try  " + retryCount + " after  " + waitTime + "ms");
+
+                                            } catch (IOException e) {
+                                                retryCount++;
+                                                System.out.println("Try  " + retryCount + " after  " + waitTime + "ms");
 
                                                 try {
                                                     Thread.sleep(waitTime);
                                                 } catch (InterruptedException ex) {
                                                     Thread.currentThread().interrupt();
                                                 }
-                                                retryCount++;
-                                                waitTime *= 2;
+
+                                                waitTime *= 1.3;
                                             }
-                                            System.out.println("Try  " + retryCount + " after  " + waitTime + "ms");
-
-                                        } catch (IOException e) {
-                                            retryCount++;
-                                            System.out.println("Try  " + retryCount + " after  " + waitTime + "ms");
-
-                                            try {
-                                                Thread.sleep(waitTime);
-                                            } catch (InterruptedException ex) {
-                                                Thread.currentThread().interrupt();
-                                            }
-
-                                            waitTime *= 2;
                                         }
+                                        String dataResponse = responseGemini.getCandidates().get(0).content.getParts()
+                                                .get(0)
+                                                .getText();
+                                        translatedText.append(dataResponse);
                                     }
-                                    String dataResponse = responseGemini.getCandidates().get(0).content.getParts()
-                                            .get(0)
-                                            .getText();
-                                    translatedText.append(dataResponse);
                                 }
                             }
 
                             if (!fullText.toString().isEmpty()) {
                                 if (!runs.isEmpty()) {
-                                    runs.get(0).setText(translatedText.toString(), 0);
+                                    if (fullText.toString().matches(".*\\p{L}.*")) {
+                                        runs.get(0).setText(translatedText.toString().toString(), 0);
+                                    } else {
+                                        runs.get(0).setText(fullText.toString().toString(), 0);
+                                    }
 
                                     while (runs.size() > 1) {
                                         paragraph.removeRun(1);
                                     }
-                                    // for (int i = 1; i <= runs.size(); i++) {
-                                    // paragraph.removeRun(i);
-                                    // }
                                 }
                             }
                         }
@@ -324,100 +333,133 @@ public class ExportController {
 
                     StringBuilder translatedText = new StringBuilder();
 
-                    if (fullText.toString().isEmpty()) {
-                        continue;
-                    }
-                    if (typeModel.equals(Constain.GOOGLE_TRANSLATE)) {
-                        translatedText
-                                .append(GoogleTranslate.translate(sourceLanguage, targetLanguage, fullText.toString()));
-                    } else {
-                        HttpClient client = HttpClient.newHttpClient();
-                        HttpRequest request;
+                    if (!fullText.toString().isEmpty() && fullText.toString().matches(".*\\p{L}.*")) {
 
-                        Gson gson = new Gson();
-                        List<Part> parts = Collections.singletonList(new Part(Constain.ASSERT_KEY
-                                + languageOptionSource.getText() + " sang " + languageOptionTarget.getText()
-                                + " không cần diễn giải lại yêu cầu của tôi :" + fullText.toString()));
+                        if (typeModel.equals(Constain.GOOGLE_TRANSLATE)) {
+                            translatedText
+                                    .append(GoogleTranslate.translate(sourceLanguage, targetLanguage,
+                                            fullText.toString()));
+                        } else {
+                            HttpClient client = HttpClient.newHttpClient();
+                            HttpRequest request;
 
-                        List<ContentText> contents = Collections.singletonList(new ContentText(parts, "user"));
-                        GenerationConfig config = new GenerationConfig(TEMPERATURE, TOP_K, TOP_P, MAX_OUT_PUT_TOKENS,
-                                RESPONSE_MIME_TYPE);
-                        RequestBodySend requestBody = new RequestBodySend(contents, config);
-                        gson = new GsonBuilder().setPrettyPrinting().create();
-                        String bodyData = gson.toJson(requestBody);
+                            Gson gson = new Gson();
+                            List<Part> parts = Collections.singletonList(new Part(Constain.ASSERT_KEY
+                                    + languageOptionSource.getText() + " sang " + languageOptionTarget.getText()
+                                    + " không cần diễn giải lại yêu cầu của tôi :" + fullText.toString()));
 
-                        StringBuilder url = new StringBuilder();
-                        if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_EXP)) {
-                            url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_EXP + KEY_API_GEMINI);
-                        }
-                        if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_THINK_EXP_01_21)) {
-                            url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_THINK_EXP_01_21
-                                    + KEY_API_GEMINI);
-                        }
-                        if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_2_0_PRO_EXP_02_05)) {
-                            url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_PRO_EXP_02_05 + KEY_API_GEMINI);
-                        }
+                            List<ContentText> contents = Collections.singletonList(new ContentText(parts, "user"));
+                            GenerationConfig config = new GenerationConfig(TEMPERATURE, TOP_K, TOP_P,
+                                    MAX_OUT_PUT_TOKENS,
+                                    RESPONSE_MIME_TYPE);
+                            RequestBodySend requestBody = new RequestBodySend(contents, config);
+                            gson = new GsonBuilder().setPrettyPrinting().create();
+                            String bodyData = gson.toJson(requestBody);
 
-                        request = HttpRequest.newBuilder()
-                                .header("Content-Type", "application/json")
-                                .uri(new URI(url.toString()))
-                                .POST(HttpRequest.BodyPublishers.ofString(bodyData, StandardCharsets.UTF_8))
-                                .build();
+                            StringBuilder url = new StringBuilder();
+                            if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_EXP)) {
+                                url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_EXP + KEY_API_GEMINI);
+                            }
+                            if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_THINK_EXP_01_21)) {
+                                url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_THINK_EXP_01_21
+                                        + KEY_API_GEMINI);
+                            }
+                            if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_2_0_PRO_EXP_02_05)) {
+                                url.append(
+                                        URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_PRO_EXP_02_05 + KEY_API_GEMINI);
+                            }
 
-                        HttpResponse<String> responseData;
-                        RequestBodyResponse responseGemini = null;
+                            if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_2_0_FLASH)) {
+                                url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_FLASH + KEY_API_GEMINI);
+                            }
 
-                        while (retryCount < maxRetries) {
-                            try {
-                                responseData = client.send(request, HttpResponse.BodyHandlers.ofString());
-                                if (responseData.body() == null || responseData.body().isEmpty()) {
-                                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                            "ERROR  GEMINI");
-                                }
+                            if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_PRE_02_05)) {
+                                url.append(
+                                        URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_PRE_02_05 + KEY_API_GEMINI);
+                            }
 
+                            if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_1_5_PRO)) {
+                                url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_1_5_PRO + KEY_API_GEMINI);
+                            }
+
+                            request = HttpRequest.newBuilder()
+                                    .header("Content-Type", "application/json")
+                                    .uri(new URI(url.toString()))
+                                    .POST(HttpRequest.BodyPublishers.ofString(bodyData, StandardCharsets.UTF_8))
+                                    .build();
+
+                            HttpResponse<String> responseData;
+                            RequestBodyResponse responseGemini = null;
+
+                            while (retryCount < maxRetries) {
                                 try {
-                                    responseGemini = gson.fromJson(responseData.body(), RequestBodyResponse.class);
-                                } catch (IllegalStateException e) {
-                                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                            "ERROR  GEMINI");
-                                }
-                                if (responseGemini.getCandidates() != null && !responseGemini.getCandidates().isEmpty()
-                                        && !responseGemini.getCandidates().get(0).content.getParts().isEmpty()) {
+                                    responseData = client.send(request, HttpResponse.BodyHandlers.ofString());
+                                    if (responseData.body() == null || responseData.body().isEmpty()) {
+                                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                                "ERROR  GEMINI");
+                                    }
 
-                                    break;
-                                } else {
+                                    try {
+                                        responseGemini = gson.fromJson(responseData.body(), RequestBodyResponse.class);
+                                    } catch (IllegalStateException e) {
+                                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                                "ERROR  GEMINI");
+                                    }
+                                    if (responseGemini.getCandidates() != null
+                                            && !responseGemini.getCandidates().isEmpty()
+                                            && !responseGemini.getCandidates().get(0).content.getParts().isEmpty()) {
+
+                                        break;
+                                    } else {
+                                        ErrorResponseHead responseHead = gson.fromJson(responseData.body(),
+                                                ErrorResponseHead.class);
+                                        ErrorResponseData error = responseHead.getError();
+                                        System.out.println(String.format("Ma code loi: %d, message: %s, status = %s",
+                                                error.getCode(), error.getMessage(), error.getStatus()));
+                                        try {
+                                            Thread.sleep(waitTime);
+                                        } catch (InterruptedException ex) {
+                                            Thread.currentThread().interrupt();
+                                        }
+                                        retryCount++;
+                                        waitTime *= 1.3;
+                                    }
+                                    System.out.println("Try  " + retryCount + " after  " + waitTime + "ms");
+
+                                } catch (IOException e) {
+                                    retryCount++;
+                                    System.out.println("Try  " + retryCount + " after  " + waitTime + "ms");
 
                                     try {
                                         Thread.sleep(waitTime);
                                     } catch (InterruptedException ex) {
                                         Thread.currentThread().interrupt();
                                     }
-                                    retryCount++;
-                                    waitTime *= 2;
+
+                                    waitTime *= 1.3;
                                 }
-                                System.out.println("Try  " + retryCount + " after  " + waitTime + "ms");
-
-                            } catch (IOException e) {
-                                retryCount++;
-                                System.out.println("Try  " + retryCount + " after  " + waitTime + "ms");
-
-                                try {
-                                    Thread.sleep(waitTime);
-                                } catch (InterruptedException ex) {
-                                    Thread.currentThread().interrupt();
-                                }
-
-                                waitTime *= 2;
                             }
+                            retryCount = 0;
+                            waitTime = 1000;
+                            String dataResponse = responseGemini.getCandidates().get(0).content.getParts().get(0)
+                                    .getText();
+                            translatedText.append(dataResponse);
                         }
-                        String dataResponse = responseGemini.getCandidates().get(0).content.getParts().get(0).getText();
-                        translatedText.append(dataResponse);
                     }
 
-                    if (!runs.isEmpty()) {
-                        runs.get(0).setText(translatedText.toString(), 0);
-                        while (runs.size() > 1) {
-                            paragraph.removeRun(1);
+                    if (!fullText.toString().isEmpty()) {
+                        if (!runs.isEmpty()) {
+                            if (fullText.toString().matches(".*\\p{L}.*")) {
+
+                                runs.get(0).setText(translatedText.toString().toString(), 0);
+                            } else {
+                                runs.get(0).setText(fullText.toString().toString(), 0);
+
+                            }
+
+                            while (runs.size() > 1) {
+                                paragraph.removeRun(1);
+                            }
                         }
                     }
                 }

@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
-public class ErrorResponseHead {
-    private ErrorResponseData error;
+public class ErrorResponseData {
+    private int code;
+    private String message;
+    private String status;
 }
