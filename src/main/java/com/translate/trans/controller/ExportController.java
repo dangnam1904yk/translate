@@ -80,7 +80,7 @@ public class ExportController {
     private String RESPONSE_MIME_TYPE;
 
     private long waitTime = 1000;
-    private int maxRetries = 50;
+    private int maxRetries = 100;
     private int retryCount = 0;
 
     @GetMapping("/")
@@ -195,8 +195,20 @@ public class ExportController {
                         + KEY_API_GEMINI);
             }
 
+            if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_2_0_FLASH)) {
+                url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_FLASH + KEY_API_GEMINI);
+            }
+
+            if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_PRE_02_05)) {
+                url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_PRE_02_05 + KEY_API_GEMINI);
+            }
+
             if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_1_5_FLASH)) {
                 url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_1_5_FLASH + KEY_API_GEMINI);
+            }
+
+            if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_1_5_PRO)) {
+                url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_1_5_PRO + KEY_API_GEMINI);
             }
 
             if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_1_5_FLASH_8B)) {
@@ -494,13 +506,16 @@ public class ExportController {
                 response.setHeader("Content-Disposition", "attachment; filename=processed_document.docx");
             }
             sourceDoc.write(response.getOutputStream());
+            retryCount = 0;
         } catch (IOException e) {
             e.printStackTrace();
+            retryCount = 0;
         }
         long endTime = System.nanoTime();
         long duration = (endTime - startTime) / 1_000_000; // Chuyển thành millisecond
         double minutes = duration / 60000.0; // Chia cho 60,000
         System.out.println("Time end: " + minutes + " minutes");
+        waitTime = 1000;
     }
 }
 
