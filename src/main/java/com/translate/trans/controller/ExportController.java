@@ -39,6 +39,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -80,8 +81,9 @@ public class ExportController {
     private String RESPONSE_MIME_TYPE;
 
     private long waitTime = 1000;
-    private int maxRetries = 100;
+    private int maxRetries = Integer.MAX_VALUE;
     private int retryCount = 0;
+    private List<ContentText> listHistory = new ArrayList<>();
 
     @GetMapping("/")
     public String getMethodName() {
@@ -215,6 +217,9 @@ public class ExportController {
                 url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_1_5_FLASH_8B + KEY_API_GEMINI);
             }
 
+            if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_2_0_PRO_EXP_UNLIMITED)) {
+                url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_PRO_EXP_UNLIMITED + KEY_API_GEMINI);
+            }
             boolean isCallBackLimit = false;
             for (XWPFTable table : sourceDoc.getTables()) {
                 if (isCallBackLimit) {
@@ -306,10 +311,10 @@ public class ExportController {
                                                         Thread.currentThread().interrupt();
                                                     }
                                                     retryCount++;
-                                                    waitTime *= 1.3;
-                                                    if (waitTime >= Constain.WAIT_TIME) {
-                                                        waitTime = 1000;
-                                                    }
+                                                    // waitTime *= 1.3;
+                                                    // if (waitTime >= Constain.WAIT_TIME) {
+                                                    // waitTime = 1000;
+                                                    // }
                                                 }
                                                 System.out.println("Try  " + retryCount + " after  " + waitTime + "ms");
 
@@ -323,10 +328,10 @@ public class ExportController {
                                                     Thread.currentThread().interrupt();
                                                 }
                                                 retryCount++;
-                                                waitTime *= 1.3;
-                                                if (waitTime >= Constain.WAIT_TIME) {
-                                                    waitTime = 1000;
-                                                }
+                                                // waitTime *= 1.3;
+                                                // if (waitTime >= Constain.WAIT_TIME) {
+                                                // waitTime = 1000;
+                                                // }
                                             }
                                         }
 
@@ -361,7 +366,9 @@ public class ExportController {
                 }
             }
 
+            StringBuilder largetText = new StringBuilder();
             for (XWPFParagraph paragraph : sourceDoc.getParagraphs()) {
+
                 if (isCallBackLimit) {
                     break;
                 }
@@ -376,126 +383,140 @@ public class ExportController {
                             fullText.append(text);
                         }
                     }
+                    largetText.append(fullText.toString());
+                    largetText.append("\n");
 
-                    StringBuilder translatedText = new StringBuilder();
+                    if (largetText.toString().length() > 3_000) {
 
-                    if (!fullText.toString().isEmpty() && fullText.toString().matches(".*\\p{L}.*")) {
+                        StringBuilder translatedText = new StringBuilder();
 
-                        if (typeModel.equals(Constain.GOOGLE_TRANSLATE)) {
-                            translatedText
-                                    .append(GoogleTranslate.translate(sourceLanguage, targetLanguage,
-                                            fullText.toString()));
-                        } else {
-                            HttpClient client = HttpClient.newHttpClient();
-                            HttpRequest request;
+                        if (!largetText.toString().isEmpty()
+                        // && largetText.toString().matches(".*\\p{L}.*")
+                        ) {
 
-                            Gson gson = new Gson();
-                            List<Part> parts = Collections.singletonList(new Part(Constain.ASSERT_KEY
-                                    + languageOptionSource.getText() + " sang " + languageOptionTarget.getText()
-                                    + "và làm ơn không cần diễn giải lại yêu cầu, tôi chỉ muốn nhận kết quả : "
-                                    + fullText.toString()));
+                            if (typeModel.equals(Constain.GOOGLE_TRANSLATE)) {
+                                translatedText
+                                        .append(GoogleTranslate.translate(sourceLanguage, targetLanguage,
+                                                largetText.toString()));
+                            } else {
+                                HttpClient client = HttpClient.newHttpClient();
+                                HttpRequest request;
 
-                            List<ContentText> contents = Collections.singletonList(new ContentText(parts, "user"));
-                            GenerationConfig config = new GenerationConfig(TEMPERATURE, TOP_K, TOP_P,
-                                    MAX_OUT_PUT_TOKENS,
-                                    RESPONSE_MIME_TYPE);
-                            RequestBodySend requestBody = new RequestBodySend(contents, config);
-                            gson = new GsonBuilder().setPrettyPrinting().create();
-                            String bodyData = gson.toJson(requestBody);
+                                Gson gson = new Gson();
+                                List<Part> parts = Collections.singletonList(new Part(Constain.ASSERT_KEY
+                                        + languageOptionSource.getText() + " sang " + languageOptionTarget.getText()
+                                        + "và làm ơn không cần diễn giải lại yêu cầu, tôi chỉ muốn nhận kết quả : "
+                                        + largetText.toString()));
 
-                            request = HttpRequest.newBuilder()
-                                    .header("Content-Type", "application/json")
-                                    .uri(new URI(url.toString()))
-                                    .POST(HttpRequest.BodyPublishers.ofString(bodyData, StandardCharsets.UTF_8))
-                                    .build();
+                                // List<ContentText> contents = Collections.singletonList(new ContentText(parts,
+                                // "user"));
+                                listHistory.add(new ContentText(parts, "user"));
+                                GenerationConfig config = new GenerationConfig(TEMPERATURE, TOP_K, TOP_P,
+                                        MAX_OUT_PUT_TOKENS,
+                                        RESPONSE_MIME_TYPE);
+                                RequestBodySend requestBody = new RequestBodySend(listHistory, config);
+                                gson = new GsonBuilder().setPrettyPrinting().create();
+                                String bodyData = gson.toJson(requestBody);
 
-                            HttpResponse<String> responseData;
-                            RequestBodyResponse responseGemini = null;
+                                request = HttpRequest.newBuilder()
+                                        .header("Content-Type", "application/json")
+                                        .uri(new URI(url.toString()))
+                                        .POST(HttpRequest.BodyPublishers.ofString(bodyData, StandardCharsets.UTF_8))
+                                        .build();
 
-                            while (retryCount < maxRetries) {
-                                try {
-                                    responseData = client.send(request, HttpResponse.BodyHandlers.ofString());
-                                    if (responseData.body() == null || responseData.body().isEmpty()) {
-                                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                                "ERROR  GEMINI");
-                                    }
+                                HttpResponse<String> responseData;
+                                RequestBodyResponse responseGemini = null;
 
+                                while (retryCount < maxRetries) {
                                     try {
-                                        responseGemini = gson.fromJson(responseData.body(), RequestBodyResponse.class);
-                                    } catch (IllegalStateException e) {
-                                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                                "ERROR  GEMINI");
-                                    }
-                                    if (responseGemini.getCandidates() != null
-                                            && !responseGemini.getCandidates().isEmpty()
-                                            && !responseGemini.getCandidates().get(0).content.getParts().isEmpty()) {
+                                        responseData = client.send(request, HttpResponse.BodyHandlers.ofString());
+                                        if (responseData.body() == null || responseData.body().isEmpty()) {
+                                            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                                    "ERROR  GEMINI");
+                                        }
 
-                                        break;
-                                    } else {
-                                        ErrorResponseHead responseHead = gson.fromJson(responseData.body(),
-                                                ErrorResponseHead.class);
-                                        ErrorResponseData error = responseHead.getError();
-                                        System.out.println(String.format("Ma code loi: %d, message: %s, status = %s",
-                                                error.getCode(), error.getMessage(), error.getStatus()));
+                                        try {
+                                            responseGemini = gson.fromJson(responseData.body(),
+                                                    RequestBodyResponse.class);
+                                        } catch (IllegalStateException e) {
+                                            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                                    "ERROR  GEMINI");
+                                        }
+                                        if (responseGemini.getCandidates() != null
+                                                && !responseGemini.getCandidates().isEmpty()
+                                                && !responseGemini.getCandidates().get(0).content.getParts()
+                                                        .isEmpty()) {
+
+                                            break;
+                                        } else {
+                                            ErrorResponseHead responseHead = gson.fromJson(responseData.body(),
+                                                    ErrorResponseHead.class);
+                                            ErrorResponseData error = responseHead.getError();
+                                            System.out
+                                                    .println(String.format("Ma code loi: %d, message: %s, status = %s",
+                                                            error.getCode(), error.getMessage(), error.getStatus()));
+                                            try {
+                                                Thread.sleep(waitTime);
+                                            } catch (InterruptedException ex) {
+                                                Thread.currentThread().interrupt();
+                                            }
+                                            retryCount++;
+                                            // waitTime *= 1.3;
+                                            // if (waitTime >= Constain.WAIT_TIME) {
+                                            // waitTime = 1000;
+                                            // }
+
+                                        }
+                                        System.out.println("Try  " + retryCount + " after  " + waitTime + "ms");
+
+                                    } catch (IOException e) {
+                                        retryCount++;
+                                        System.out.println("Try  " + retryCount + " after  " + waitTime + "ms");
+
                                         try {
                                             Thread.sleep(waitTime);
                                         } catch (InterruptedException ex) {
                                             Thread.currentThread().interrupt();
                                         }
+
                                         retryCount++;
-                                        waitTime *= 1.3;
-                                        if (waitTime >= Constain.WAIT_TIME) {
-                                            waitTime = 1000;
-                                        }
-
-                                    }
-                                    System.out.println("Try  " + retryCount + " after  " + waitTime + "ms");
-
-                                } catch (IOException e) {
-                                    retryCount++;
-                                    System.out.println("Try  " + retryCount + " after  " + waitTime + "ms");
-
-                                    try {
-                                        Thread.sleep(waitTime);
-                                    } catch (InterruptedException ex) {
-                                        Thread.currentThread().interrupt();
-                                    }
-
-                                    retryCount++;
-                                    waitTime *= 1.3;
-                                    if (waitTime >= Constain.WAIT_TIME) {
-                                        waitTime = 1000;
+                                        // waitTime *= 1.3;
+                                        // if (waitTime >= Constain.WAIT_TIME) {
+                                        // waitTime = 1000;
+                                        // }
                                     }
                                 }
-                            }
-                            if (retryCount >= maxRetries) {
-                                isCallBackLimit = true;
-                                System.out.println("ERROR: GEMINI KHONH PHAN HOI");
-                                continue;
-                            }
-                            retryCount = 0;
-                            waitTime = 1000;
-                            String dataResponse = responseGemini.getCandidates().get(0).content.getParts().get(0)
-                                    .getText();
-                            translatedText.append(dataResponse);
-                        }
-                    }
-
-                    if (!fullText.toString().isEmpty()) {
-                        if (!runs.isEmpty()) {
-                            if (fullText.toString().matches(".*\\p{L}.*")) {
-
-                                runs.get(0).setText(translatedText.toString(), 0);
-                            } else {
-                                runs.get(0).setText(fullText.toString(), 0);
-
-                            }
-
-                            while (runs.size() > 1) {
-                                paragraph.removeRun(1);
+                                if (retryCount >= maxRetries) {
+                                    isCallBackLimit = true;
+                                    System.out.println("ERROR: GEMINI KHONH PHAN HOI");
+                                    continue;
+                                }
+                                retryCount = 0;
+                                waitTime = 1000;
+                                String dataResponse = responseGemini.getCandidates().get(0).content.getParts().get(0)
+                                        .getText();
+                                listHistory.add(responseGemini.getCandidates().get(0).content);
+                                translatedText.append(dataResponse);
                             }
                         }
+
+                        if (!largetText.toString().isEmpty()) {
+                            if (!runs.isEmpty()) {
+                                if (fullText.toString().matches(".*\\p{L}.*")) {
+
+                                    runs.get(0).setText(translatedText.toString(), 0);
+                                } else {
+                                    runs.get(0).setText(largetText.toString(), 0);
+
+                                }
+
+                                while (runs.size() > 1) {
+                                    paragraph.removeRun(1);
+                                }
+                            }
+                        }
                     }
+                    largetText.setLength(0);
                 }
             }
 
@@ -516,6 +537,11 @@ public class ExportController {
         double minutes = duration / 60000.0; // Chia cho 60,000
         System.out.println("Time end: " + minutes + " minutes");
         waitTime = 1000;
+    }
+
+    private List<ContentText> getConversationHistory(ContentText contentText) {
+        listHistory.add(contentText);
+        return listHistory;
     }
 }
 
