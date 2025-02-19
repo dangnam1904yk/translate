@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 
 import com.darkprograms.speech.translator.GoogleTranslate;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.translate.trans.model.LanguageConfig;
@@ -37,9 +38,11 @@ import org.springframework.web.server.ResponseStatusException;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -64,7 +67,7 @@ public class ExportController {
     private DocxProcessorService docxProcessorService;
 
     @Value("${spring.key.gemini.token}")
-    private String KEY_API_GEMINI;
+    private String apiKey;
 
     @Value("${spring.key.gemini.url}")
     private String URL_GEMINI;
@@ -79,11 +82,6 @@ public class ExportController {
     private int MAX_OUT_PUT_TOKENS;
     @Value("${spring.key.gemini.responseMimeType}")
     private String RESPONSE_MIME_TYPE;
-
-    private long waitTime = 1000;
-    private int maxRetries = Integer.MAX_VALUE;
-    private int retryCount = 0;
-    private List<ContentText> listHistory = new ArrayList<>();
 
     @GetMapping("/")
     public String getMethodName() {
@@ -139,8 +137,21 @@ public class ExportController {
             @RequestParam("sourceLanguage") String sourceLanguage,
             @RequestParam("targetLanguage") String targetLanguage,
             @RequestParam("type") String typeModel,
+            @RequestParam("apiKey") String apiKey,
+            @RequestParam("requestModel") String requestModel,
+            @RequestParam("temperature") double temperature,
+            @RequestParam("maxLength") long maxLength,
             Model model)
-            throws IOException, InvalidFormatException, URISyntaxException, InterruptedException {
+            throws IOException, InvalidFormatException, URISyntaxException,
+            ArrayIndexOutOfBoundsException,
+            IndexOutOfBoundsException,
+            InterruptedException {
+
+        long waitTime = 2000;
+        int maxRetries = Integer.MAX_VALUE;
+        int retryCount = 0;
+        List<ContentText> listHistory = new ArrayList<>();
+
         Optional<LanguageOption> resultfindOptional1 = LanguageConfig.getLanguages().stream()
                 .filter(e -> e.getValue().equals(sourceLanguage))
                 .findFirst();
@@ -185,40 +196,40 @@ public class ExportController {
             if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_EXP)) {
                 url.append(
                         URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_EXP
-                                + KEY_API_GEMINI);
+                                + apiKey);
             }
             if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_THINK_EXP_01_21)) {
                 url.append(
                         URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_THINK_EXP_01_21
-                                + KEY_API_GEMINI);
+                                + apiKey);
             }
             if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_2_0_PRO_EXP_02_05)) {
                 url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_PRO_EXP_02_05
-                        + KEY_API_GEMINI);
+                        + apiKey);
             }
 
             if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_2_0_FLASH)) {
-                url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_FLASH + KEY_API_GEMINI);
+                url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_FLASH + apiKey);
             }
 
             if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_PRE_02_05)) {
-                url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_PRE_02_05 + KEY_API_GEMINI);
+                url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_FLASH_PRE_02_05 + apiKey);
             }
 
             if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_1_5_FLASH)) {
-                url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_1_5_FLASH + KEY_API_GEMINI);
+                url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_1_5_FLASH + apiKey);
             }
 
             if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_1_5_PRO)) {
-                url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_1_5_PRO + KEY_API_GEMINI);
+                url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_1_5_PRO + apiKey);
             }
 
             if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_1_5_FLASH_8B)) {
-                url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_1_5_FLASH_8B + KEY_API_GEMINI);
+                url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_1_5_FLASH_8B + apiKey);
             }
 
             if (typeModel.equals(Constain.MODEL_GEMINI.GEMINI_2_0_PRO_EXP_UNLIMITED)) {
-                url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_PRO_EXP_UNLIMITED + KEY_API_GEMINI);
+                url.append(URL_GEMINI + Constain.MODEL_GEMINI.GEMINI_2_0_PRO_EXP_UNLIMITED + apiKey);
             }
             boolean isCallBackLimit = false;
             for (XWPFTable table : sourceDoc.getTables()) {
@@ -257,14 +268,14 @@ public class ExportController {
                                         HttpRequest request;
 
                                         Gson gson = new Gson();
-                                        List<Part> parts = Collections.singletonList(new Part(Constain.ASSERT_KEY
-                                                + languageOptionSource.getText() + " sang "
+                                        List<Part> parts = Collections.singletonList(new Part(requestModel
+                                                + " " + languageOptionSource.getText() + " sang "
                                                 + languageOptionTarget.getText()
                                                 + " không cần diễn giải lại yêu cầu của tôi :" + fullText.toString()));
 
                                         List<ContentText> contents = Collections
                                                 .singletonList(new ContentText(parts, "user"));
-                                        GenerationConfig config = new GenerationConfig(TEMPERATURE, TOP_K, TOP_P,
+                                        GenerationConfig config = new GenerationConfig(temperature, TOP_K, TOP_P,
                                                 MAX_OUT_PUT_TOKENS,
                                                 RESPONSE_MIME_TYPE);
                                         RequestBodySend requestBody = new RequestBodySend(contents, config);
@@ -367,160 +378,182 @@ public class ExportController {
             }
 
             StringBuilder largetText = new StringBuilder();
+            StringBuilder translatedText = new StringBuilder();
+            int indexPar = 0;
             for (XWPFParagraph paragraph : sourceDoc.getParagraphs()) {
-
                 if (isCallBackLimit) {
                     break;
                 }
                 List<XWPFRun> runs = paragraph.getRuns();
                 if (runs != null) {
                     StringBuilder fullText = new StringBuilder();
-
-                    // Ghép toàn bộ văn bản trong paragraph
                     for (XWPFRun run : runs) {
                         String text = run.getText(0);
-                        if (text != null) {
+
+                        if (text != null && runs.size() > 1) {
+                            fullText.append(text);
+                            fullText.append(Constain.BREAK_RUN);
+                        } else if (text != null) {
                             fullText.append(text);
                         }
                     }
-                    largetText.append(fullText.toString());
-                    largetText.append("\n");
+                    if (!fullText.toString().isEmpty()) {
+                        largetText.append(fullText.toString());
+                        largetText.append(Constain.BREAK_PARAGRAPH);
+                    } else {
+                        largetText.append(Constain.DATA_EMPTY_REPLACLE);
+                        largetText.append(Constain.BREAK_PARAGRAPH);
+                    }
+                }
+                indexPar++;
 
-                    if (largetText.toString().length() > 3_000) {
+                if (largetText.toString().length() > maxLength || sourceDoc.getParagraphs().size() == indexPar) {
 
-                        StringBuilder translatedText = new StringBuilder();
+                    if (!largetText.toString().isEmpty()
+                    // && largetText.toString().matches(".*\\p{L}.*")
+                    ) {
 
-                        if (!largetText.toString().isEmpty()
-                        // && largetText.toString().matches(".*\\p{L}.*")
-                        ) {
+                        if (typeModel.equals(Constain.GOOGLE_TRANSLATE)) {
+                            translatedText
+                                    .append(GoogleTranslate.translate(sourceLanguage, targetLanguage,
+                                            largetText.toString()));
+                        } else {
+                            HttpClient client = HttpClient.newHttpClient();
+                            HttpRequest request;
 
-                            if (typeModel.equals(Constain.GOOGLE_TRANSLATE)) {
-                                translatedText
-                                        .append(GoogleTranslate.translate(sourceLanguage, targetLanguage,
-                                                largetText.toString()));
-                            } else {
-                                HttpClient client = HttpClient.newHttpClient();
-                                HttpRequest request;
+                            Gson gson = new Gson();
+                            List<Part> parts = Collections.singletonList(new Part(requestModel
+                                    + " " + languageOptionSource.getText() + " sang " + languageOptionTarget.getText()
+                                    + "và làm ơn không cần diễn giải lại yêu cầu và không thêm hoặc bớt các ký tự, tôi chỉ muốn nhận kết quả: "
+                                    + largetText.toString()));
 
-                                Gson gson = new Gson();
-                                List<Part> parts = Collections.singletonList(new Part(Constain.ASSERT_KEY
-                                        + languageOptionSource.getText() + " sang " + languageOptionTarget.getText()
-                                        + "và làm ơn không cần diễn giải lại yêu cầu, tôi chỉ muốn nhận kết quả : "
-                                        + largetText.toString()));
+                            // List<ContentText> contents = Collections.singletonList(new ContentText(parts,
+                            // "user"));
+                            listHistory.add(new ContentText(parts, "user"));
+                            GenerationConfig config = new GenerationConfig(temperature, TOP_K, TOP_P,
+                                    MAX_OUT_PUT_TOKENS,
+                                    RESPONSE_MIME_TYPE);
+                            RequestBodySend requestBody = new RequestBodySend(listHistory, config);
+                            gson = new GsonBuilder().setPrettyPrinting().create();
+                            String bodyData = gson.toJson(requestBody);
 
-                                // List<ContentText> contents = Collections.singletonList(new ContentText(parts,
-                                // "user"));
-                                listHistory.add(new ContentText(parts, "user"));
-                                GenerationConfig config = new GenerationConfig(TEMPERATURE, TOP_K, TOP_P,
-                                        MAX_OUT_PUT_TOKENS,
-                                        RESPONSE_MIME_TYPE);
-                                RequestBodySend requestBody = new RequestBodySend(listHistory, config);
-                                gson = new GsonBuilder().setPrettyPrinting().create();
-                                String bodyData = gson.toJson(requestBody);
+                            request = HttpRequest.newBuilder()
+                                    .header("Content-Type", "application/json")
+                                    .uri(new URI(url.toString()))
+                                    .POST(HttpRequest.BodyPublishers.ofString(bodyData, StandardCharsets.UTF_8))
+                                    .build();
 
-                                request = HttpRequest.newBuilder()
-                                        .header("Content-Type", "application/json")
-                                        .uri(new URI(url.toString()))
-                                        .POST(HttpRequest.BodyPublishers.ofString(bodyData, StandardCharsets.UTF_8))
-                                        .build();
+                            HttpResponse<String> responseData;
+                            RequestBodyResponse responseGemini = null;
 
-                                HttpResponse<String> responseData;
-                                RequestBodyResponse responseGemini = null;
+                            while (retryCount < maxRetries) {
+                                try {
+                                    responseData = client.send(request, HttpResponse.BodyHandlers.ofString());
+                                    if (responseData.body() == null || responseData.body().isEmpty()) {
+                                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                                "ERROR  GEMINI");
+                                    }
 
-                                while (retryCount < maxRetries) {
                                     try {
-                                        responseData = client.send(request, HttpResponse.BodyHandlers.ofString());
-                                        if (responseData.body() == null || responseData.body().isEmpty()) {
-                                            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                                    "ERROR  GEMINI");
-                                        }
+                                        responseGemini = gson.fromJson(responseData.body(),
+                                                RequestBodyResponse.class);
+                                    } catch (IllegalStateException e) {
+                                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                                "ERROR  GEMINI");
+                                    }
+                                    if (responseGemini.getCandidates() != null
+                                            && !responseGemini.getCandidates().isEmpty()
+                                            && !responseGemini.getCandidates().get(0).content.getParts()
+                                                    .isEmpty()) {
 
-                                        try {
-                                            responseGemini = gson.fromJson(responseData.body(),
-                                                    RequestBodyResponse.class);
-                                        } catch (IllegalStateException e) {
-                                            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                                    "ERROR  GEMINI");
-                                        }
-                                        if (responseGemini.getCandidates() != null
-                                                && !responseGemini.getCandidates().isEmpty()
-                                                && !responseGemini.getCandidates().get(0).content.getParts()
-                                                        .isEmpty()) {
-
-                                            break;
-                                        } else {
-                                            ErrorResponseHead responseHead = gson.fromJson(responseData.body(),
-                                                    ErrorResponseHead.class);
-                                            ErrorResponseData error = responseHead.getError();
-                                            System.out
-                                                    .println(String.format("Ma code loi: %d, message: %s, status = %s",
-                                                            error.getCode(), error.getMessage(), error.getStatus()));
-                                            try {
-                                                Thread.sleep(waitTime);
-                                            } catch (InterruptedException ex) {
-                                                Thread.currentThread().interrupt();
-                                            }
-                                            retryCount++;
-                                            // waitTime *= 1.3;
-                                            // if (waitTime >= Constain.WAIT_TIME) {
-                                            // waitTime = 1000;
-                                            // }
-
-                                        }
-                                        System.out.println("Try  " + retryCount + " after  " + waitTime + "ms");
-
-                                    } catch (IOException e) {
-                                        retryCount++;
-                                        System.out.println("Try  " + retryCount + " after  " + waitTime + "ms");
-
+                                        break;
+                                    } else {
+                                        ErrorResponseHead responseHead = gson.fromJson(responseData.body(),
+                                                ErrorResponseHead.class);
+                                        ErrorResponseData error = responseHead.getError();
+                                        System.out
+                                                .println(String.format("Ma code loi: %d, message: %s, status = %s",
+                                                        error.getCode(), error.getMessage(), error.getStatus()));
                                         try {
                                             Thread.sleep(waitTime);
                                         } catch (InterruptedException ex) {
                                             Thread.currentThread().interrupt();
                                         }
-
                                         retryCount++;
                                         // waitTime *= 1.3;
                                         // if (waitTime >= Constain.WAIT_TIME) {
                                         // waitTime = 1000;
                                         // }
+
                                     }
-                                }
-                                if (retryCount >= maxRetries) {
-                                    isCallBackLimit = true;
-                                    System.out.println("ERROR: GEMINI KHONH PHAN HOI");
-                                    continue;
-                                }
-                                retryCount = 0;
-                                waitTime = 1000;
-                                String dataResponse = responseGemini.getCandidates().get(0).content.getParts().get(0)
-                                        .getText();
-                                listHistory.add(responseGemini.getCandidates().get(0).content);
-                                translatedText.append(dataResponse);
-                            }
-                        }
+                                    System.out.println("Try  " + retryCount + " after  " + waitTime + "ms");
 
-                        if (!largetText.toString().isEmpty()) {
-                            if (!runs.isEmpty()) {
-                                if (fullText.toString().matches(".*\\p{L}.*")) {
+                                } catch (IOException e) {
+                                    retryCount++;
+                                    System.out.println("Try  " + retryCount + " after  " + waitTime + "ms");
 
-                                    runs.get(0).setText(translatedText.toString(), 0);
-                                } else {
-                                    runs.get(0).setText(largetText.toString(), 0);
+                                    try {
+                                        Thread.sleep(waitTime);
+                                    } catch (InterruptedException ex) {
+                                        Thread.currentThread().interrupt();
+                                    }
 
-                                }
-
-                                while (runs.size() > 1) {
-                                    paragraph.removeRun(1);
+                                    retryCount++;
+                                    // waitTime *= 1.3;
+                                    // if (waitTime >= Constain.WAIT_TIME) {
+                                    // waitTime = 1000;
+                                    // }
                                 }
                             }
+                            if (retryCount >= maxRetries) {
+                                isCallBackLimit = true;
+                                System.out.println("ERROR: GEMINI KHONH PHAN HOI");
+                                continue;
+                            }
+                            retryCount = 0;
+                            waitTime = 1000;
+                            String dataResponse = responseGemini.getCandidates().get(0).content.getParts().get(0)
+                                    .getText();
+                            listHistory.add(responseGemini.getCandidates().get(0).content);
+                            translatedText.append(dataResponse);
                         }
+                        largetText.setLength(0);
                     }
-                    largetText.setLength(0);
                 }
             }
 
+            String[] data = translatedText.toString().split(Constain.BREAK_PARAGRAPH);
+            // data = Arrays.stream(data)
+            // .filter(str -> !str.equals(Constain.DATA_EMPTY_REPLACLE))
+            // .toArray(String[]::new);
+            int index = 0;
+            for (XWPFParagraph paragraph : sourceDoc.getParagraphs()) {
+                List<XWPFRun> runs = paragraph.getRuns();
+                if (index >= data.length) {
+                    break;
+                }
+                String[] dataRun = data[index].split(Constain.BREAK_RUN.trim());
+                if (runs != null) {
+                    int i = 0;
+                    for (XWPFRun run : runs) {
+                        if (i < dataRun.length) {
+                            run.setText(dataRun[i].equals(Constain.DATA_EMPTY_REPLACLE + Constain.DATA_ERROR1) ? " "
+                                    : dataRun[i], 0);
+                            // run.setText(dataRun[i], 0);
+                            i++;
+                        }
+                    }
+                }
+                index++;
+
+            }
             response.setContentType(typeContent);
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            GenerationConfig config = new GenerationConfig(temperature, TOP_K, TOP_P,
+                    MAX_OUT_PUT_TOKENS,
+                    RESPONSE_MIME_TYPE);
+            objectMapper.writeValue(new File("datacall.json"), new RequestBodySend(listHistory, config));
             if (typeContent.equals(Constain.ContenType.DOC)) {
                 response.setHeader("Content-Disposition", "attachment; filename=processed_document.doc");
             } else {
@@ -528,7 +561,9 @@ public class ExportController {
             }
             sourceDoc.write(response.getOutputStream());
             retryCount = 0;
-        } catch (IOException e) {
+        } catch (
+
+        IOException e) {
             e.printStackTrace();
             retryCount = 0;
         }
@@ -539,7 +574,7 @@ public class ExportController {
         waitTime = 1000;
     }
 
-    private List<ContentText> getConversationHistory(ContentText contentText) {
+    private List<ContentText> getConversationHistory(ContentText contentText, List<ContentText> listHistory) {
         listHistory.add(contentText);
         return listHistory;
     }
