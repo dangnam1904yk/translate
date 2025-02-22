@@ -4,13 +4,13 @@ public interface Constain {
     public final String ASSERT_KEY = "Đây là một cuốn sách về hẹn hò .Bạn là một chuyên gia trong lĩnh vực hẹn hò Hãy dịch sang tiếng việt ";
     public final int GEMINI_2 = 2;
     public final String GOOGLE_TRANSLATE = "1";
-    public final long WAIT_TIME = 300000; // 600000ms
-    public final String BREAK_PARAGRAPH = "\n------\n";
-    public final String DATA_EMPTY_REPLACLE = "======";
-    public final String DATA_ERROR1 = "\n------";
-    public final String DATA_ERROR = "------";
+    public final long WAIT_TIME = 60000; // 600000ms
+    public final String BREAK_PARAGRAPH = "1P./.";
+    public final String DATA_EMPTY_REPLACLE = "2E./.";
+    public final String DATA_ERROR1 = "7777777";
+    public final String DATA_ERROR = "8888888";
 
-    public final String BREAK_RUN = " #### ";
+    public final String BREAK_RUN = "3B./.";
 
     public interface MODEL_GEMINI {
         public final String GEMINI_2_0_FLASH_EXP = "gemini-2.0-flash-exp:generateContent?key=";
