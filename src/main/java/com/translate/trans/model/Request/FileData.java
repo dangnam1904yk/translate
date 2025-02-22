@@ -6,10 +6,12 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@AllArgsConstructor
-@NoArgsConstructor
 @Data
-public class Part {
-    private String text;
-    private FileData file_data;
+@NoArgsConstructor
+@AllArgsConstructor
+public class FileData {
+    @JsonProperty("mine_type")
+    private String mime_type;
+    @JsonProperty("file_uri")
+    private String file_uri;
 }

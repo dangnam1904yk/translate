@@ -9,8 +9,9 @@ public interface Constain {
     public final String DATA_EMPTY_REPLACLE = "2E./.";
     public final String DATA_ERROR1 = "7777777";
     public final String DATA_ERROR = "8888888";
-
     public final String BREAK_RUN = "3B./.";
+
+    public final String BASE_URL_UPLOAD = "https://generativelanguage.googleapis.com/upload/v1beta/files";
 
     public interface MODEL_GEMINI {
         public final String GEMINI_2_0_FLASH_EXP = "gemini-2.0-flash-exp:generateContent?key=";

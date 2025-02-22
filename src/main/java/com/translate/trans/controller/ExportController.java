@@ -21,9 +21,12 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.translate.trans.model.LanguageConfig;
 import com.translate.trans.model.LanguageOption;
 import com.translate.trans.model.Request.ContentText;
+import com.translate.trans.model.Request.FileData;
 import com.translate.trans.model.Request.GenerationConfig;
 import com.translate.trans.model.Request.Part;
 import com.translate.trans.model.Request.RequestBodySend;
@@ -38,10 +41,16 @@ import org.springframework.web.server.ResponseStatusException;
 
 import jakarta.servlet.http.HttpServletResponse;
 
+import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -272,11 +281,7 @@ public class ExportController {
                                         HttpRequest request;
 
                                         Gson gson = new Gson();
-                                        List<Part> parts = Collections.singletonList(new Part(requestModel
-                                                + " từ " + languageOptionSource.getText() + " sang "
-                                                + languageOptionTarget.getText()
-                                                + " không cần diễn giải lại yêu cầu của tôi. Nếu không có chữ để dịch thì trả kết quả như đoạn yêu cầu cảm ơn: "
-                                                + fullText.toString()));
+                                        List<Part> parts = Collections.singletonList(null);
 
                                         List<ContentText> contents = Collections
                                                 .singletonList(new ContentText(parts, "user"));
@@ -462,22 +467,39 @@ public class ExportController {
                             // "\n Làm ơn hãy nắm rõ mọi yêu cầu tôi đặt ra, đoạn văn cần dịch như sau: "
                             // + largetText.toString()));
 
-                            List<Part> parts = Collections.singletonList(new Part(requestModel
-                                    // + " từ " + languageOptionSource.getText()
-                                    // + " sang "
-                                    // + languageOptionTarget.getText()
-                                    + " và KHÔNG ĐƯỢC diễn giải lại yêu cầu, không trích dẫn đoạn văn yêu cầu, tôi chỉ muốn nhận kết quả. "
-                                    // + "\n 2. Giữ nguyên (không xóa không thêm) các kí tự sau: "
-                                    // + Constain.BREAK_PARAGRAPH
-                                    // + " và "
-                                    // + Constain.BREAK_RUN + " và " + Constain.DATA_EMPTY_REPLACLE
-                                    // + " vì nó rất quan trọng với tôi " +
-                                    + " Nếu đoạn văn yêu cầu dịch không có chữ thì trả kết quả như đoạn văn đã yêu cầu:\n "
-                                    + largetText.toString()));
-
                             // List<ContentText> contents = Collections.singletonList(new ContentText(parts,
                             // "user"));
-                            listHistory.add(new ContentText(parts, "user"));
+
+                            try (BufferedWriter writer = new BufferedWriter(new FileWriter("input.txt"))) {
+                                writer.write(largetText.toString());
+
+                                System.out.println("Ghi file thành công!");
+                            } catch (IOException e) {
+                                System.out.println("Lỗi khi ghi file: " + e.getMessage());
+                            }
+
+                            String uploadUrl = startResumableUpload(getMimeType("input.txt"), getNumBytes("input.txt"),
+                                    "input", apiKey);
+
+                            if (uploadUrl == null) {
+                                System.err.println("Failed to get upload URL.");
+                                return;
+                            }
+
+                            String fileInfoJson = uploadFileBytes(uploadUrl, getNumBytes("input.txt"));
+                            if (fileInfoJson == null) {
+                                System.err.println("File upload failed.");
+                                return;
+                            }
+
+                            String fileUri = getFileUriFromJson(fileInfoJson);
+                            System.out.println("file_uri=" + fileUri);
+
+                            List<Part> parts = Collections.singletonList(
+                                    new Part(requestModel, new FileData(getMimeType("input.txt"), fileUri)));
+
+                            listHistory.add(
+                                    new ContentText(parts, "user"));
                             GenerationConfig config = new GenerationConfig(temperature, TOP_K, TOP_P,
                                     MAX_OUT_PUT_TOKENS,
                                     RESPONSE_MIME_TYPE);
@@ -689,6 +711,83 @@ public class ExportController {
     private List<ContentText> getConversationHistory(ContentText contentText, List<ContentText> listHistory) {
         listHistory.add(contentText);
         return listHistory;
+    }
+
+    private String uploadFileBytes(String uploadUrl, long numBytes) throws IOException, InterruptedException {
+        try (FileInputStream fis = new FileInputStream("input.txt")) {
+            byte[] data = fis.readAllBytes();
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(uploadUrl))
+                    // .header("Content-Length", String.valueOf(numBytes))
+                    .header("X-Goog-Upload-Offset", "0")
+                    .header("X-Goog-Upload-Command", "upload, finalize")
+                    .PUT(HttpRequest.BodyPublishers.ofByteArray(data))
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                return response.body();
+            } else {
+                System.err.println("Error uploading file: " + response.statusCode() + " - " + response.body());
+                return null;
+            }
+        }
+    }
+
+    private String startResumableUpload(String mimeType, long numBytes, String displayName, String apiKey)
+            throws IOException, InterruptedException {
+        String url = Constain.BASE_URL_UPLOAD + "?key=" + apiKey;
+
+        HttpClient client = HttpClient.newHttpClient();
+        String requestBody = String.format("{\"file\": {\"display_name\": \"%s\"}}", displayName);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("X-Goog-Upload-Protocol", "resumable")
+                .header("X-Goog-Upload-Command", "start")
+                .header("X-Goog-Upload-Header-Content-Length", String.valueOf(numBytes))
+                .header("X-Goog-Upload-Header-Content-Type", mimeType)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() >= 200 && response.statusCode() < 300) {
+            return response.headers().firstValue("X-Goog-Upload-URL").orElse(null);
+        } else {
+            System.err.println("Error starting upload: " + response.statusCode() + " - " + response.body());
+            return null;
+        }
+    }
+
+    private String getMimeType(String pathfile) {
+        Path path = Paths.get(pathfile);
+
+        try {
+            String mimeType = Files.probeContentType(path);
+            System.out.println("MIME Type: " + mimeType);
+            return mimeType;
+        } catch (IOException e) {
+            System.out.println("Lỗi: " + e.getMessage());
+        }
+        return null;
+    }
+
+    private long getNumBytes(String textPath) throws IOException {
+        return Files.size(Paths.get(textPath));
+    }
+
+    private String getFileUriFromJson(String json) {
+        try {
+            JsonObject jsonObject = JsonParser.parseString(json).getAsJsonObject();
+            return jsonObject.getAsJsonObject("file").get("uri").getAsString();
+        } catch (Exception e) {
+            System.err.println("Error parsing file URI: " + e.getMessage());
+            return null;
+        }
     }
 }
 
