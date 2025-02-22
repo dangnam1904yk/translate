@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 
 import com.darkprograms.speech.translator.GoogleTranslate;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -178,15 +179,18 @@ public class ExportController {
         }
 
         String typeContent = file.getContentType();
+        String documentName = file.getOriginalFilename();
+        System.out.println("Dang doc file:" + documentName);
+
         if (!typeContent.equals(Constain.ContenType.DOC) && !typeContent.equals(Constain.ContenType.DOCX)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "FILE NO SUPPORT");
         }
         response.setContentType(typeContent);
         if (typeContent.equals(Constain.ContenType.DOC)) {
-            response.setHeader("Content-Disposition", "attachment; filename=document.docx");
+            response.setHeader("Content-Disposition", "attachment; filename=" + documentName);
         } else {
-            response.setHeader("Content-Disposition", "attachment; filename=document.doc");
+            response.setHeader("Content-Disposition", "attachment; filename=" + documentName);
         }
         long startTime = System.nanoTime();
         try (XWPFDocument sourceDoc = new XWPFDocument(file.getInputStream());
@@ -269,9 +273,10 @@ public class ExportController {
 
                                         Gson gson = new Gson();
                                         List<Part> parts = Collections.singletonList(new Part(requestModel
-                                                + " " + languageOptionSource.getText() + " sang "
+                                                + " từ " + languageOptionSource.getText() + " sang "
                                                 + languageOptionTarget.getText()
-                                                + " không cần diễn giải lại yêu cầu của tôi :" + fullText.toString()));
+                                                + " không cần diễn giải lại yêu cầu của tôi. Nếu không có chữ để dịch thì trả kết quả như đoạn yêu cầu cảm ơn: "
+                                                + fullText.toString()));
 
                                         List<ContentText> contents = Collections
                                                 .singletonList(new ContentText(parts, "user"));
@@ -378,7 +383,10 @@ public class ExportController {
             }
 
             StringBuilder largetText = new StringBuilder();
+            StringBuffer allText = new StringBuffer();
             StringBuilder translatedText = new StringBuilder();
+            StringBuilder translatedTextPart = new StringBuilder();
+
             int indexPar = 0;
             for (XWPFParagraph paragraph : sourceDoc.getParagraphs()) {
                 if (isCallBackLimit) {
@@ -422,9 +430,49 @@ public class ExportController {
                             HttpRequest request;
 
                             Gson gson = new Gson();
+                            // List<Part> parts = Collections.singletonList(new Part(requestModel
+                            // // + " từ " + languageOptionSource.getText()
+                            // + " sang "
+                            // + languageOptionTarget.getText()
+                            // + " và KHÔNG ĐƯỢC diễn giải lại yêu cầu, không trích dẫn đoạn văn yêu cầu,
+                            // không thêm hoặc bớt các ký tự, tôi chỉ muốn nhận kết quả. "
+                            // +
+                            // "Nếu đoạn văn yêu cầu dịch không có chữ thì trả kết quả như đoạn văn đã yêu
+                            // cầu."
+                            // + "Tuyệt đối không xóa bớt các kí tự này (" + Constain.BREAK_PARAGRAPH + " và
+                            // "
+                            // + Constain.BREAK_RUN + "): "
+                            // + largetText.toString()));
+
+                            // List<Part> parts = Collections.singletonList(new Part(requestModel
+                            // // + " từ " + languageOptionSource.getText()
+                            // // + " sang "
+                            // // + languageOptionTarget.getText()
+                            // + " phải thỏa mãn các yêu cầu sau:" +
+                            // "\n 1. KHÔNG ĐƯỢC diễn giải lại yêu cầu, không trích dẫn đoạn văn yêu cầu,
+                            // tôi chỉ muốn nhận kết quả"
+                            // + "\n 2. Giữ nguyên (không xóa không thêm) các kí tự sau: "
+                            // + Constain.BREAK_PARAGRAPH
+                            // + " và "
+                            // + Constain.BREAK_RUN + " và " + Constain.DATA_EMPTY_REPLACLE
+                            // + " vì nó rất quan trọng với tôi " +
+                            // "\n 3. Nếu đoạn văn yêu cầu dịch không có chữ thì trả kết quả như đoạn văn đã
+                            // yêu cầu"
+                            // +
+                            // "\n Làm ơn hãy nắm rõ mọi yêu cầu tôi đặt ra, đoạn văn cần dịch như sau: "
+                            // + largetText.toString()));
+
                             List<Part> parts = Collections.singletonList(new Part(requestModel
-                                    + " " + languageOptionSource.getText() + " sang " + languageOptionTarget.getText()
-                                    + "và làm ơn không cần diễn giải lại yêu cầu và không thêm hoặc bớt các ký tự, tôi chỉ muốn nhận kết quả: "
+                                    // + " từ " + languageOptionSource.getText()
+                                    // + " sang "
+                                    // + languageOptionTarget.getText()
+                                    + " và KHÔNG ĐƯỢC diễn giải lại yêu cầu, không trích dẫn đoạn văn yêu cầu, tôi chỉ muốn nhận kết quả. "
+                                    // + "\n 2. Giữ nguyên (không xóa không thêm) các kí tự sau: "
+                                    // + Constain.BREAK_PARAGRAPH
+                                    // + " và "
+                                    // + Constain.BREAK_RUN + " và " + Constain.DATA_EMPTY_REPLACLE
+                                    // + " vì nó rất quan trọng với tôi " +
+                                    + " Nếu đoạn văn yêu cầu dịch không có chữ thì trả kết quả như đoạn văn đã yêu cầu:\n "
                                     + largetText.toString()));
 
                             // List<ContentText> contents = Collections.singletonList(new ContentText(parts,
@@ -434,7 +482,7 @@ public class ExportController {
                                     MAX_OUT_PUT_TOKENS,
                                     RESPONSE_MIME_TYPE);
                             RequestBodySend requestBody = new RequestBodySend(listHistory, config);
-                            gson = new GsonBuilder().setPrettyPrinting().create();
+                            gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
                             String bodyData = gson.toJson(requestBody);
 
                             request = HttpRequest.newBuilder()
@@ -445,7 +493,8 @@ public class ExportController {
 
                             HttpResponse<String> responseData;
                             RequestBodyResponse responseGemini = null;
-
+                            long totalCountP = 2;
+                            long totalCountTranslatorP = 0;
                             while (retryCount < maxRetries) {
                                 try {
                                     responseData = client.send(request, HttpResponse.BodyHandlers.ofString());
@@ -466,24 +515,52 @@ public class ExportController {
                                             && !responseGemini.getCandidates().get(0).content.getParts()
                                                     .isEmpty()) {
 
-                                        break;
+                                        String dataResponse = responseGemini.getCandidates().get(0).content.getParts()
+                                                .get(0)
+                                                .getText();
+                                        listHistory.add(responseGemini.getCandidates().get(0).content);
+                                        System.out.println(String.format("Ket qua gemini tra ve: %s", dataResponse));
+                                        // translatedText.append(dataResponse);
+                                        translatedTextPart.append(dataResponse);
+                                        totalCountP = largetText.toString().split(Constain.BREAK_PARAGRAPH).length;
+                                        totalCountTranslatorP = translatedTextPart.toString()
+                                                .split(Constain.BREAK_PARAGRAPH).length;
+                                        System.out.println(String.format("Lager text : %d", totalCountP));
+
+                                        System.out
+                                                .println(String.format("Translator part : %d", totalCountTranslatorP));
+                                        if (totalCountTranslatorP - totalCountP > -4
+                                                && totalCountTranslatorP - totalCountP < 4) {
+
+                                            break;
+                                        } else {
+                                            System.out.print("gemini tra sai dinh dang kq");
+                                            translatedTextPart.setLength(0);
+                                        }
+
                                     } else {
                                         ErrorResponseHead responseHead = gson.fromJson(responseData.body(),
                                                 ErrorResponseHead.class);
                                         ErrorResponseData error = responseHead.getError();
-                                        System.out
-                                                .println(String.format("Ma code loi: %d, message: %s, status = %s",
-                                                        error.getCode(), error.getMessage(), error.getStatus()));
+                                        if (error != null) {
+                                            System.out
+                                                    .println(String.format(
+                                                            "Ma code loi: %d, message: %s, status = %s",
+                                                            error.getCode(), error.getMessage(),
+                                                            error.getStatus()));
+                                        } else {
+                                            System.out.println(responseData.body().toString());
+                                        }
                                         try {
                                             Thread.sleep(waitTime);
                                         } catch (InterruptedException ex) {
                                             Thread.currentThread().interrupt();
                                         }
                                         retryCount++;
-                                        // waitTime *= 1.3;
-                                        // if (waitTime >= Constain.WAIT_TIME) {
-                                        // waitTime = 1000;
-                                        // }
+                                        waitTime *= 1.3;
+                                        if (waitTime >= Constain.WAIT_TIME) {
+                                            waitTime = 1000;
+                                        }
 
                                     }
                                     System.out.println("Try  " + retryCount + " after  " + waitTime + "ms");
@@ -504,29 +581,37 @@ public class ExportController {
                                     // waitTime = 1000;
                                     // }
                                 }
-                            }
-                            if (retryCount >= maxRetries) {
-                                isCallBackLimit = true;
-                                System.out.println("ERROR: GEMINI KHONH PHAN HOI");
-                                continue;
+
+                                if (retryCount >= maxRetries) {
+                                    isCallBackLimit = true;
+                                    System.out.println("ERROR: GEMINI KHONH PHAN HOI");
+                                    continue;
+                                }
+
                             }
                             retryCount = 0;
                             waitTime = 1000;
-                            String dataResponse = responseGemini.getCandidates().get(0).content.getParts().get(0)
-                                    .getText();
-                            listHistory.add(responseGemini.getCandidates().get(0).content);
-                            translatedText.append(dataResponse);
+                            translatedText.append(translatedTextPart.toString());
+                            System.out.println(String.format("Translate: %d",
+                                    translatedText.toString().split(Constain.BREAK_PARAGRAPH).length));
+                            allText.append(largetText);
+                            largetText.setLength(0);
+                            translatedTextPart.setLength(0);
                         }
-                        largetText.setLength(0);
                     }
                 }
             }
-
+            System.out.println(allText.toString().split(Constain.BREAK_PARAGRAPH).length);
+            System.out.println(String.format("PARAGRAPS: %d", sourceDoc.getParagraphs().size()));
+            System.out.println(String.format("Translate: %d",
+                    translatedText.toString().split(Constain.BREAK_PARAGRAPH).length));
             String[] data = translatedText.toString().split(Constain.BREAK_PARAGRAPH);
             // data = Arrays.stream(data)
             // .filter(str -> !str.equals(Constain.DATA_EMPTY_REPLACLE))
             // .toArray(String[]::new);
+            // if (data.length == sourceDoc.getParagraphs().size()) {
             int index = 0;
+            System.out.println("Dang ghi lai file");
             for (XWPFParagraph paragraph : sourceDoc.getParagraphs()) {
                 List<XWPFRun> runs = paragraph.getRuns();
                 if (index >= data.length) {
@@ -537,7 +622,7 @@ public class ExportController {
                     int i = 0;
                     for (XWPFRun run : runs) {
                         if (i < dataRun.length) {
-                            run.setText(dataRun[i].equals(Constain.DATA_EMPTY_REPLACLE + Constain.DATA_ERROR1) ? " "
+                            run.setText(dataRun[i].equals(Constain.DATA_EMPTY_REPLACLE) ? " "
                                     : dataRun[i], 0);
                             // run.setText(dataRun[i], 0);
                             i++;
@@ -547,17 +632,44 @@ public class ExportController {
                 index++;
 
             }
+            // } else {
+            // try {
+
+            // int index = 0;
+            // for (XWPFParagraph paragraph : sourceDoc.getParagraphs()) {
+            // List<XWPFRun> runs = paragraph.getRuns();
+            // if (index >= sourceDoc.getParagraphs().size()) {
+            // break;
+            // }
+            // String newText = data[index]
+            // .replaceAll(Constain.BREAK_RUN, "")
+            // .replaceAll(Constain.DATA_EMPTY_REPLACLE, "")
+            // .replaceAll(Constain.DATA_ERROR, "")
+            // .replaceAll(Constain.DATA_EMPTY_REPLACLE + Constain.DATA_ERROR1, "");
+            // if (runs != null) {
+            // runs.get(0).setText(newText, 0);
+            // }
+            // while (runs.size() > 1) {
+            // paragraph.removeRun(1);
+            // }
+            // index++;
+            // }
+            // } catch (Exception ex) {
+
+            // }
+            // }
             response.setContentType(typeContent);
 
             ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.disable(JsonGenerator.Feature.ESCAPE_NON_ASCII);
             GenerationConfig config = new GenerationConfig(temperature, TOP_K, TOP_P,
                     MAX_OUT_PUT_TOKENS,
                     RESPONSE_MIME_TYPE);
             objectMapper.writeValue(new File("datacall.json"), new RequestBodySend(listHistory, config));
             if (typeContent.equals(Constain.ContenType.DOC)) {
-                response.setHeader("Content-Disposition", "attachment; filename=processed_document.doc");
+                response.setHeader("Content-Disposition", "attachment; filename=" + documentName);
             } else {
-                response.setHeader("Content-Disposition", "attachment; filename=processed_document.docx");
+                response.setHeader("Content-Disposition", "attachment; filename=" + documentName);
             }
             sourceDoc.write(response.getOutputStream());
             retryCount = 0;
