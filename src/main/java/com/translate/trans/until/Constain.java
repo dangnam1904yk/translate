@@ -5,12 +5,12 @@ public interface Constain {
     public final int GEMINI_2 = 2;
     public final String GOOGLE_TRANSLATE = "1";
     public final long WAIT_TIME = 60000; // 600000ms
-    public final String BREAK_PARAGRAPH = "1P./.";
-    public final String DATA_EMPTY_REPLACLE = "2E./.";
+    public final String BREAK_PARAGRAPH = " /N_A_M/ ";
+    public final String DATA_EMPTY_REPLACLE = " /EM_MM/ ";
     public final String DATA_ERROR1 = "7777777";
     public final String DATA_ERROR = "8888888";
 
-    public final String BREAK_RUN = "3B./.";
+    public final String BREAK_RUN = " /N_U_U/ ";
 
     public interface MODEL_GEMINI {
         public final String GEMINI_2_0_FLASH_EXP = "gemini-2.0-flash-exp:generateContent?key=";

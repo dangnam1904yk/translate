@@ -430,19 +430,12 @@ public class ExportController {
                             HttpRequest request;
 
                             Gson gson = new Gson();
-                            // List<Part> parts = Collections.singletonList(new Part(requestModel
-                            // // + " từ " + languageOptionSource.getText()
-                            // + " sang "
-                            // + languageOptionTarget.getText()
-                            // + " và KHÔNG ĐƯỢC diễn giải lại yêu cầu, không trích dẫn đoạn văn yêu cầu,
-                            // không thêm hoặc bớt các ký tự, tôi chỉ muốn nhận kết quả. "
-                            // +
-                            // "Nếu đoạn văn yêu cầu dịch không có chữ thì trả kết quả như đoạn văn đã yêu
-                            // cầu."
-                            // + "Tuyệt đối không xóa bớt các kí tự này (" + Constain.BREAK_PARAGRAPH + " và
-                            // "
-                            // + Constain.BREAK_RUN + "): "
-                            // + largetText.toString()));
+                            List<Part> parts = Collections.singletonList(new Part(requestModel
+                                    + " và KHÔNG ĐƯỢC diễn giải lại yêu cầu, không trích dẫn đoạn văn yêu cầu, không thêm hoặc bớt các ký tự, tôi chỉ muốn nhận kết quả."
+                                    +
+                                    " Nếu đoạn văn yêu cầu dịch không có chữ thì trả kết quả như đoạn văn đã yêu cầu. Tuyệt đối không xóa bớt các kí tự này kể cả dấu khoảng trắng ("
+                                    + Constain.BREAK_PARAGRAPH + " và " + Constain.BREAK_RUN + "): "
+                                    + largetText.toString()));
 
                             // List<Part> parts = Collections.singletonList(new Part(requestModel
                             // // + " từ " + languageOptionSource.getText()
@@ -462,18 +455,20 @@ public class ExportController {
                             // "\n Làm ơn hãy nắm rõ mọi yêu cầu tôi đặt ra, đoạn văn cần dịch như sau: "
                             // + largetText.toString()));
 
-                            List<Part> parts = Collections.singletonList(new Part(requestModel
-                                    // + " từ " + languageOptionSource.getText()
-                                    // + " sang "
-                                    // + languageOptionTarget.getText()
-                                    + " và KHÔNG ĐƯỢC diễn giải lại yêu cầu, không trích dẫn đoạn văn yêu cầu, tôi chỉ muốn nhận kết quả. "
-                                    // + "\n 2. Giữ nguyên (không xóa không thêm) các kí tự sau: "
-                                    // + Constain.BREAK_PARAGRAPH
-                                    // + " và "
-                                    // + Constain.BREAK_RUN + " và " + Constain.DATA_EMPTY_REPLACLE
-                                    // + " vì nó rất quan trọng với tôi " +
-                                    + " Nếu đoạn văn yêu cầu dịch không có chữ thì trả kết quả như đoạn văn đã yêu cầu:\n "
-                                    + largetText.toString()));
+                            // List<Part> parts = Collections.singletonList(new Part(requestModel
+                            // // + " từ " + languageOptionSource.getText()
+                            // // + " sang "
+                            // // + languageOptionTarget.getText()
+                            // + " và KHÔNG ĐƯỢC diễn giải lại yêu cầu, không trích dẫn đoạn văn yêu cầu,
+                            // tôi chỉ muốn nhận kết quả. "
+                            // // + "\n 2. Giữ nguyên (không xóa không thêm) các kí tự sau: "
+                            // // + Constain.BREAK_PARAGRAPH
+                            // // + " và "
+                            // // + Constain.BREAK_RUN + " và " + Constain.DATA_EMPTY_REPLACLE
+                            // // + " vì nó rất quan trọng với tôi " +
+                            // + " Nếu đoạn văn yêu cầu dịch không có chữ thì trả kết quả như đoạn văn đã
+                            // yêu cầu:\n "
+                            // + largetText.toString()));
 
                             // List<ContentText> contents = Collections.singletonList(new ContentText(parts,
                             // "user"));
@@ -522,15 +517,16 @@ public class ExportController {
                                         System.out.println(String.format("Ket qua gemini tra ve: %s", dataResponse));
                                         // translatedText.append(dataResponse);
                                         translatedTextPart.append(dataResponse);
-                                        totalCountP = largetText.toString().split(Constain.BREAK_PARAGRAPH).length;
+                                        totalCountP = largetText.toString()
+                                                .split(Constain.BREAK_PARAGRAPH.trim()).length;
                                         totalCountTranslatorP = translatedTextPart.toString()
-                                                .split(Constain.BREAK_PARAGRAPH).length;
+                                                .split(Constain.BREAK_PARAGRAPH.trim()).length;
                                         System.out.println(String.format("Lager text : %d", totalCountP));
 
                                         System.out
                                                 .println(String.format("Translator part : %d", totalCountTranslatorP));
-                                        if (totalCountTranslatorP - totalCountP > -4
-                                                && totalCountTranslatorP - totalCountP < 4) {
+                                        if (totalCountTranslatorP - totalCountP > -2
+                                                && totalCountTranslatorP - totalCountP < 2) {
 
                                             break;
                                         } else {
@@ -593,7 +589,7 @@ public class ExportController {
                             waitTime = 1000;
                             translatedText.append(translatedTextPart.toString());
                             System.out.println(String.format("Translate: %d",
-                                    translatedText.toString().split(Constain.BREAK_PARAGRAPH).length));
+                                    translatedText.toString().split(Constain.BREAK_PARAGRAPH.trim()).length));
                             allText.append(largetText);
                             largetText.setLength(0);
                             translatedTextPart.setLength(0);
@@ -601,11 +597,11 @@ public class ExportController {
                     }
                 }
             }
-            System.out.println(allText.toString().split(Constain.BREAK_PARAGRAPH).length);
+            System.out.println(allText.toString().split(Constain.BREAK_PARAGRAPH.trim()).length);
             System.out.println(String.format("PARAGRAPS: %d", sourceDoc.getParagraphs().size()));
             System.out.println(String.format("Translate: %d",
-                    translatedText.toString().split(Constain.BREAK_PARAGRAPH).length));
-            String[] data = translatedText.toString().split(Constain.BREAK_PARAGRAPH);
+                    translatedText.toString().split(Constain.BREAK_PARAGRAPH.trim()).length));
+            String[] data = translatedText.toString().split(Constain.BREAK_PARAGRAPH.trim());
             // data = Arrays.stream(data)
             // .filter(str -> !str.equals(Constain.DATA_EMPTY_REPLACLE))
             // .toArray(String[]::new);
@@ -617,13 +613,13 @@ public class ExportController {
                 if (index >= data.length) {
                     break;
                 }
-                String[] dataRun = data[index].split(Constain.BREAK_RUN.trim());
+                String[] dataRun = data[index].trim().split(Constain.BREAK_RUN.trim());
                 if (runs != null) {
                     int i = 0;
                     for (XWPFRun run : runs) {
                         if (i < dataRun.length) {
                             run.setText(dataRun[i].equals(Constain.DATA_EMPTY_REPLACLE) ? " "
-                                    : dataRun[i], 0);
+                                    : dataRun[i].trim(), 0);
                             // run.setText(dataRun[i], 0);
                             i++;
                         }
