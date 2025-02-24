@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class FileData {
     @JsonProperty("mine_type")
-    private String mime_type;
+    private String mimeType;
     @JsonProperty("file_uri")
-    private String file_uri;
+    private String fileUri;
 }
