@@ -10,8 +10,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class FileData {
-    @JsonProperty("mine_type")
+    @JsonProperty("mineType")
     private String mimeType;
-    @JsonProperty("file_uri")
+    @JsonProperty("fileUri")
     private String fileUri;
 }

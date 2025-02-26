@@ -495,8 +495,9 @@ public class ExportController {
                             String fileUri = getFileUriFromJson(fileInfoJson);
                             System.out.println("file_uri=" + fileUri);
 
-                            List<Part> parts = Collections.singletonList(
-                                    new Part(requestModel, new FileData(getMimeType("input.txt"), fileUri)));
+                            List<Part> parts = Arrays.asList(
+                                    new Part(new FileData(getMimeType("input.txt"), fileUri)),
+                                    new Part(requestModel + " giữ nguyên các ký tự đặc biệt "));
 
                             listHistory.add(
                                     new ContentText(parts, "user"));
@@ -556,7 +557,7 @@ public class ExportController {
 
                                             break;
                                         } else {
-                                            System.out.print("gemini tra sai dinh dang kq");
+                                            System.out.println("gemini tra sai dinh dang kq");
                                             translatedTextPart.setLength(0);
                                         }
 

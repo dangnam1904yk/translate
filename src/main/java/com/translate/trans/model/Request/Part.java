@@ -10,6 +10,14 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Data
 public class Part {
+    private FileData fileData;
     private String text;
-    private FileData file_data;
+
+    public Part(String text) {
+        this.text = text;
+    }
+
+    public Part(FileData fileData) {
+        this.fileData = fileData;
+    }
 }
