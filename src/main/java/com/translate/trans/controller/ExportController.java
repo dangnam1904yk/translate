@@ -1,5 +1,6 @@
 package com.translate.trans.controller;
 
+import com.google.cloud.translate.v3.*;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.util.Units;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
