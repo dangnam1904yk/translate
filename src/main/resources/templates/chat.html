@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Dịch tài liệu</title>
+    <!-- <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"> -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+</head>
+
+<body>
+    <div class="container mt-2">
+        <h2 class="mb-2">Dịch tài liệu</h2>
+        <form action="/chat" method="post" id="upload" class="needs-validation" enctype="multipart/form-data">
+
+            <div class="form-group col-md-6">
+                <label for="type">Model</label>
+                <select id="type" name="type" class="form-control">
+
+                    <optgroup label="Gemini">
+                        <option value="gemini-2.0-pro-exp-02-05:generateContent?key=">Gemini 2.0 Pro Experimental 02-05
+                        </option>
+                        <option value="gemini-2.0-flash-thinking-exp-01-21:generateContent?key=">Gemini 2.0 Flash
+                            Thinking Experimental 01-21</option>
+                        <option value="gemini-2.0-flash:generateContent?key=">Gemini 2.0 Flash (Trả phí)</option>
+                        <option value="gemini-2.0-flash-lite-preview-02-05:generateContent?key=">Gemini 2.0 Flash-Lite
+                            Preview 02-05 (Trả phí)</option>
+                        <option value="gemini-1.5-pro:generateContent?key=">Gemini 1.5 (Trả Phí)</option>
+                        <option value="gemini-1.5-flash:generateContent?key=">Gemini 1.5 Flash (Trả Phí)</option>
+                        <option value="gemini-2.0-flash-exp:generateContent?key=">Gemini 2.0 Flash Experimental (Trả
+                            Phí)</option>
+                        <option value="gemini-2.0-pro-exp:generateContent?key=">Gemini 2.0 Pro Experimental Unlimited
+                        </option>
+                    </optgroup>
+                    <option value="1">Google Dịch</option>
+                </select>
+            </div>
+
+            <div class="form-group col-md-6">
+                <label for="apiKey">Key Api</label>
+                <input name="apiKey" class="form-control" id="apiKey" type="text" required>
+                <div  id="apiKeyError" style="color: red;"></div>
+            </div>
+
+            <div class="form-group col-md-6">
+                <label for="temperature">Temperature (Chiều sâu suy luận)</label>
+                <input name="temperature" class="form-control" value="2" type="number" id="temperature" step="0.01"
+                    inputmode="decimal" max="2" required>
+                    <div  id="temperatureError" style="color: red;"></div>
+            </div>
+
+
+            <span type="text" id="ccc" class="form-group col-md-6" style="color: blue; display: inline-block; "> </span>
+            <div class="form-group col-md-6">
+                <button type="submit" class="btn btn-primary">Bắt đầu kênh chat</button>
+            </div>
+        </form>
+        <p><span th:text="${message}" style="color: blue;"></span></p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
+        crossorigin="anonymous"></script>
+
+    <script type="text/javascript">
+
+        function changeText() {
+            var targetLanguage = document.getElementById("language2");
+            let selectedText1 = targetLanguage.options[targetLanguage.selectedIndex].text;
+            console.log(selectedText1);
+
+            var srcLanguage = document.getElementById("language1");
+            let selectedText2 = srcLanguage.options[srcLanguage.selectedIndex].text;
+            console.log(selectedText2);
+
+            let requestModel = document.getElementById("requestModel");
+            const textShow = document.getElementById("ccc");
+            console.log(textShow);
+            var text = "Đây là nội dung được đẩy vào gemini: " + requestModel.value + selectedText2 + " sang " + selectedText1;
+            console.log(text);
+            textShow.innerHTML = text;
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const form = document.querySelector(".needs-validation");
+            const temperatureInput = document.getElementById("temperature");
+            const maxLengthInput = document.getElementById("maxLength");
+            temperatureInput.addEventListener("input", function () {
+                let value = temperatureInput.value;
+                let errorMessage = "";
+
+                if (value === "") {
+                    errorMessage = "Trường này không được để trống.";
+                } else if (isNaN(value)) {
+                    errorMessage = "Vui lòng nhập một số hợp lệ.";
+                } else if (value < 0 || value > 2) {
+                    errorMessage = "Chỉ nhỏ hơn 2 và lớn hơn 0";
+                }
+                this.setCustomValidity(errorMessage);
+                document.getElementById("temperatureError").textContent = errorMessage;
+            });
+
+            document.getElementById("fileInput").addEventListener("change", function () {
+                const file = this.files[0];
+                const allowedExtensions = ["docx"];
+                const maxSize = 20 * 1024 * 1024; // 2MB
+                let errorMessage = "";
+
+                if (file) {
+                    const fileExtension = file.name.split(".").pop().toLowerCase();
+
+                    if (!allowedExtensions.includes(fileExtension)) {
+                        errorMessage = "Chỉ cho phép file .docx";
+                    } else if (file.size > maxSize) {
+                        errorMessage = "Kích thước file không được vượt quá 20MB.";
+                    }
+                } else {
+                    errorMessage = "Vui lòng chọn một file.";
+                }
+
+                this.setCustomValidity(errorMessage);
+                document.getElementById("fileError").textContent = errorMessage;
+            });
+
+
+            maxLengthInput.addEventListener("input", function () {
+                let value = maxLengthInput.value;
+                let errorMessage = "";
+
+                if (value === "") {
+                    errorMessage = "Trường này không được để trống.";
+                } else if (isNaN(value)) {
+                    errorMessage = "Vui lòng nhập một số hợp lệ.";
+                } else if (value < 0 || value > 24000) {
+                    errorMessage = "Chỉ được phép 24.000 ký tự";
+                }
+
+                this.setCustomValidity(errorMessage);
+                document.getElementById("maxLengthError").textContent = errorMessage;
+            });
+
+            form.addEventListener("submit", function (event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add("was-validated");
+            });
+        });
+    </script>
+
+    <style>
+        label {
+            margin-top: 10px;
+        }
+    </style>
+
+</body>
+
+</html>

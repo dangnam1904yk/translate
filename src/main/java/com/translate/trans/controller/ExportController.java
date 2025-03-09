@@ -260,7 +260,9 @@ public class ExportController {
                                 }
                             }
                             StringBuilder translatedText = new StringBuilder();
-                            if (!fullText.toString().isEmpty() && fullText.toString().matches(".*\\p{L}.*")) {
+                            if (!fullText.toString().isEmpty()
+                            // && fullText.toString().matches(".*\\p{L}.*")
+                            ) {
 
                                 if (!fullText.toString().isEmpty()) {
                                     if (typeModel.equals(Constain.GOOGLE_TRANSLATE)) {
@@ -433,8 +435,7 @@ public class ExportController {
                             List<Part> parts = Collections.singletonList(new Part(requestModel
                                     + " và KHÔNG ĐƯỢC diễn giải lại yêu cầu, không trích dẫn đoạn văn yêu cầu, không thêm hoặc bớt các ký tự, tôi chỉ muốn nhận kết quả."
                                     +
-                                    " Nếu đoạn văn yêu cầu dịch không có chữ thì trả kết quả như đoạn văn đã yêu cầu. Tuyệt đối không xóa bớt các kí tự này kể cả dấu khoảng trắng ("
-                                    + Constain.BREAK_PARAGRAPH + " và " + Constain.BREAK_RUN + "): "
+                                    " Nếu đoạn văn yêu cầu dịch không có chữ thì trả kết quả như đoạn văn đã yêu cầu : "
                                     + largetText.toString()));
 
                             // List<Part> parts = Collections.singletonList(new Part(requestModel
@@ -530,7 +531,7 @@ public class ExportController {
 
                                             break;
                                         } else {
-                                            System.out.print("gemini tra sai dinh dang kq");
+                                            System.out.println("gemini tra sai dinh dang kq");
                                             translatedTextPart.setLength(0);
                                         }
 
@@ -618,8 +619,13 @@ public class ExportController {
                     int i = 0;
                     for (XWPFRun run : runs) {
                         if (i < dataRun.length) {
-                            run.setText(dataRun[i].equals(Constain.DATA_EMPTY_REPLACLE) ? " "
-                                    : dataRun[i].trim(), 0);
+                            if (dataRun[i].equals(Constain.DATA_EMPTY_REPLACLE)
+                                    || dataRun[i].equals(Constain.DATA_EMPTY_REPLACLE.trim())) {
+                                run.setText(" ", 0);
+                            } else {
+                                run.setText(dataRun[i].trim(), 0);
+                            }
+
                             // run.setText(dataRun[i], 0);
                             i++;
                         }
