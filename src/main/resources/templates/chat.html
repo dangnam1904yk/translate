@@ -4,7 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Dịch tài liệu</title>
+    <title>Tích hợp AI</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"> -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
@@ -12,8 +14,8 @@
 
 <body>
     <div class="container mt-2">
-        <h2 class="mb-2">Dịch tài liệu</h2>
-        <form action="/chat" method="post" id="upload" class="needs-validation" enctype="multipart/form-data">
+        <h2 class="mb-2">DEMO TÍCH HỢP AI GEMINI</h2>
+        <form id="upload" class="needs-validation" enctype="multipart/form-data">
 
             <div class="form-group col-md-6">
                 <label for="type">Model</label>
@@ -34,121 +36,180 @@
                         <option value="gemini-2.0-pro-exp:generateContent?key=">Gemini 2.0 Pro Experimental Unlimited
                         </option>
                     </optgroup>
-                    <option value="1">Google Dịch</option>
+                    <!-- <option value="1">Google Dịch</option> -->
                 </select>
             </div>
 
             <div class="form-group col-md-6">
                 <label for="apiKey">Key Api</label>
                 <input name="apiKey" class="form-control" id="apiKey" type="text" required>
-                <div  id="apiKeyError" style="color: red;"></div>
+                <div id="apiKeyError" style="color: red;"></div>
             </div>
 
             <div class="form-group col-md-6">
                 <label for="temperature">Temperature (Chiều sâu suy luận)</label>
                 <input name="temperature" class="form-control" value="2" type="number" id="temperature" step="0.01"
                     inputmode="decimal" max="2" required>
-                    <div  id="temperatureError" style="color: red;"></div>
+                <div id="temperatureError" style="color: red;"></div>
             </div>
 
 
             <span type="text" id="ccc" class="form-group col-md-6" style="color: blue; display: inline-block; "> </span>
             <div class="form-group col-md-6">
-                <button type="submit" class="btn btn-primary">Bắt đầu kênh chat</button>
+                <button type="button" class="btn btn-primary" onclick="checkKeyAPI()">Bắt đầu kênh chat</button>
             </div>
         </form>
         <p><span th:text="${message}" style="color: blue;"></span></p>
+        <p><span id="log" style="color: red;"></span></p>
+
     </div>
 
+    <!-- Modal Chat -->
+        <div class="modal fade" id="chatModal" tabindex="-1" aria-labelledby="chatModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content" style="min-width: 700px;">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="chatModalLabel">Kênh Chat</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="chat-box" class="border p-2 mb-2" style="height: 300px; overflow-y: auto;">
+                            <!-- Nội dung chat sẽ hiển thị ở đây -->
+                        </div>
+                        <textarea type="text" id="chat-input" class="form-control"
+                            placeholder="Nhập tin nhắn..."></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-success" onclick="sendMessage()" id="send-button" data-bs-toggle="tooltip"
+                            title="Ctrl + Enter để gửi">Gửi</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
         crossorigin="anonymous"></script>
 
     <script type="text/javascript">
+        document.getElementById("chatModal").addEventListener("hidden.bs.modal", function () {
+    document.getElementById("chat-input").value = ""; // Xóa nội dung nhập
+    document.getElementById("chat-box").innerHTML = ""; // Xóa nội dung chat nếu cần
+    console.log("Đã reset nội dung chat!");
+    resetHistory();
 
-        function changeText() {
-            var targetLanguage = document.getElementById("language2");
-            let selectedText1 = targetLanguage.options[targetLanguage.selectedIndex].text;
-            console.log(selectedText1);
+});
 
-            var srcLanguage = document.getElementById("language1");
-            let selectedText2 = srcLanguage.options[srcLanguage.selectedIndex].text;
-            console.log(selectedText2);
+        function checkKeyAPI() {
+            $.ajax({
+                type: "GET",
+                url: "/check-key?apiKey=" + $("#apiKey").val() + "&type=" + $("#type").val() + "&temperature=" + $("#temperature").val(),
+                contentType: "application/json",  // Xác định kiểu dữ liệu gửi đi
+                dataType: "json",  // Xác định kiểu dữ liệu nhận về
 
-            let requestModel = document.getElementById("requestModel");
-            const textShow = document.getElementById("ccc");
-            console.log(textShow);
-            var text = "Đây là nội dung được đẩy vào gemini: " + requestModel.value + selectedText2 + " sang " + selectedText1;
-            console.log(text);
-            textShow.innerHTML = text;
+                success: function (response) {
+                    console.log(response);
+
+                    if (response.error) {
+                        document.getElementById("log").innerHTML = response?.error?.message;
+                    } else {
+                        let chatModal = new bootstrap.Modal(document.getElementById('chatModal'));
+                        sendMessage1("system", response.parts[0].text)
+                        chatModal.show();
+                    }
+
+                },
+                error: function (xhr, status, error) {
+                    console.error("Lỗi:", xhr);
+                    alert("Có lỗi xảy ra: " + xhr.responseText);
+                }
+            });
         }
 
-        document.addEventListener("DOMContentLoaded", function () {
-            const form = document.querySelector(".needs-validation");
-            const temperatureInput = document.getElementById("temperature");
-            const maxLengthInput = document.getElementById("maxLength");
-            temperatureInput.addEventListener("input", function () {
-                let value = temperatureInput.value;
-                let errorMessage = "";
 
-                if (value === "") {
-                    errorMessage = "Trường này không được để trống.";
-                } else if (isNaN(value)) {
-                    errorMessage = "Vui lòng nhập một số hợp lệ.";
-                } else if (value < 0 || value > 2) {
-                    errorMessage = "Chỉ nhỏ hơn 2 và lớn hơn 0";
-                }
-                this.setCustomValidity(errorMessage);
-                document.getElementById("temperatureError").textContent = errorMessage;
-            });
+        function startChat(message) {
+            $.ajax({
+                type: "POST",
+                url: "/start-chat",
+                contentType: "application/json",
+                data: JSON.stringify({ "request": message }),
+                success: function (response) {
+                    console.log(response);
 
-            document.getElementById("fileInput").addEventListener("change", function () {
-                const file = this.files[0];
-                const allowedExtensions = ["docx"];
-                const maxSize = 20 * 1024 * 1024; // 2MB
-                let errorMessage = "";
-
-                if (file) {
-                    const fileExtension = file.name.split(".").pop().toLowerCase();
-
-                    if (!allowedExtensions.includes(fileExtension)) {
-                        errorMessage = "Chỉ cho phép file .docx";
-                    } else if (file.size > maxSize) {
-                        errorMessage = "Kích thước file không được vượt quá 20MB.";
+                    if (response.error) {
+                        document.getElementById("log").innerHTML = response?.error?.message;
+                    } else {
+                        let chatModal = new bootstrap.Modal(document.getElementById('chatModal'));
+                        sendMessage1("system", response.parts[0].text)
+                        chatModal.show();
                     }
-                } else {
-                    errorMessage = "Vui lòng chọn một file.";
+
+                },
+                error: function (xhr, status, error) {
+                    console.error("Lỗi:", xhr);
+                    alert("Có lỗi xảy ra: " + xhr.responseText);
                 }
-
-                this.setCustomValidity(errorMessage);
-                document.getElementById("fileError").textContent = errorMessage;
             });
+        }
 
 
-            maxLengthInput.addEventListener("input", function () {
-                let value = maxLengthInput.value;
-                let errorMessage = "";
-
-                if (value === "") {
-                    errorMessage = "Trường này không được để trống.";
-                } else if (isNaN(value)) {
-                    errorMessage = "Vui lòng nhập một số hợp lệ.";
-                } else if (value < 0 || value > 24000) {
-                    errorMessage = "Chỉ được phép 24.000 ký tự";
+        function resetHistory() {
+            $.ajax({
+                type: "GET",
+                url: "/resetHistory",
+                contentType: "application/json",
+               
+                success: function (response) {
+                    console.log(response);
+                },
+                error: function (xhr, status, error) {
+                    console.error("Lỗi:", xhr);
                 }
-
-                this.setCustomValidity(errorMessage);
-                document.getElementById("maxLengthError").textContent = errorMessage;
             });
+        }
 
-            form.addEventListener("submit", function (event) {
-                if (!form.checkValidity()) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                }
-                form.classList.add("was-validated");
-            });
+        document.getElementById("chat-input").addEventListener("keydown", function (event) {
+            if (event.ctrlKey && event.key === "Enter") {
+                sendMessage();
+                //  document.getElementById("send-button").click();
+            }
         });
+
+        function sendMessage1(type, message) {
+            if (!message.trim()) return;
+
+            let chatBox = document.getElementById("chat-box");
+            let messageDiv = document.createElement("div");
+            messageDiv.classList.add("chat-message", type === "user" ? "user-message" : "system-message");
+
+            let iconDiv = document.createElement("div");
+            iconDiv.classList.add("chat-icon");
+            iconDiv.innerHTML = type === "user" ? `<i class="fas fa-user"></i>` : `<i class="fas fa-robot"></i>`;
+
+            let textDiv = document.createElement("div");
+            textDiv.classList.add("chat-bubble", type === "user" ? "user-bubble" : "system-bubble");
+            textDiv.innerHTML = marked.parse(message);
+
+            if (type === "user") {
+                messageDiv.appendChild(iconDiv); // Icon bên trái
+                messageDiv.appendChild(textDiv);
+            } else {
+                messageDiv.appendChild(textDiv); // Icon bên phải
+                messageDiv.appendChild(iconDiv);
+            }
+
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            let input = document.getElementById("chat-input");
+            if (type === "user") { startChat(input.value); }
+            input.value = "";
+        }
+
+        function sendMessage() {
+            let input = document.getElementById("chat-input");
+            let message = input.value.trim();
+            sendMessage1("user", message);
+        }
     </script>
 
     <style>
@@ -156,6 +217,102 @@
             margin-top: 10px;
         }
     </style>
+
+    <style>
+        .chat-message {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .user-message {
+            justify-content: flex-start;
+        }
+
+        .system-message {
+            justify-content: flex-end;
+        }
+
+        .chat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #007bff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+        }
+
+        .chat-bubble {
+            padding: 10px;
+            border-radius: 10px;
+            max-width: calc(100% - 60px);
+            word-wrap: break-word;
+        }
+
+        .user-bubble {
+            background-color: #007bff;
+            color: white;
+            margin-right: 10px;
+        }
+
+        .system-bubble {
+            background-color: #f1f1f1;
+            color: black;
+            margin-left: 10px;
+        }
+    </style>
+
+    <!-- <style>
+        .chat-box {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .chat-message {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .chat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #007bff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            margin-right: 10px;
+        }
+
+        .chat-bubble {
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 75%;
+        }
+
+        .chat-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #007bff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+}
+
+        
+    </style> -->
 
 </body>
 
