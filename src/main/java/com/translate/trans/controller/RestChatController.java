@@ -1,20 +1,5 @@
 package com.translate.trans.controller;
 
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
-
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.translate.trans.model.Request.ContentText;
-import com.translate.trans.model.Request.GenerationConfig;
-import com.translate.trans.model.Request.Part;
-import com.translate.trans.model.Request.RequestBodySend;
-import com.translate.trans.model.Request.RequestUser;
-import com.translate.trans.model.Response.RequestBodyResponse;
-import com.translate.trans.model.error.ErrorResponseData;
-import com.translate.trans.model.error.ErrorResponseHead;
-import com.translate.trans.until.Constain;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -33,7 +18,20 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.translate.trans.model.Request.ContentText;
+import com.translate.trans.model.Request.GenerationConfig;
+import com.translate.trans.model.Request.Part;
+import com.translate.trans.model.Request.RequestBodySend;
+import com.translate.trans.model.Request.RequestUser;
+import com.translate.trans.model.Response.RequestBodyResponse;
+import com.translate.trans.model.error.ErrorResponseData;
+import com.translate.trans.model.error.ErrorResponseHead;
+import com.translate.trans.until.Constain;
 
 @RestController
 public class RestChatController {
@@ -110,6 +108,7 @@ public class RestChatController {
             MODEL_GEMINI = Constain.MODEL_GEMINI.GEMINI_2_0_PRO_EXP_UNLIMITED;
         }
 
+        // Tao link url api gemini
         API_KEY = apiKey;
         TEMPERATURE = temperature;
 
@@ -126,6 +125,7 @@ public class RestChatController {
         gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
         String bodyData = gson.toJson(requestBody);
 
+        // Tạo request
         request = HttpRequest.newBuilder()
                 .header("Content-Type", "application/json")
                 .uri(new URI(url.toString()))
@@ -135,6 +135,7 @@ public class RestChatController {
         HttpResponse<String> responseData;
         RequestBodyResponse responseGemini = null;
         try {
+            // gửi request
             responseData = client.send(request, HttpResponse.BodyHandlers.ofString());
             if (responseData.body() == null || responseData.body().isEmpty()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -152,13 +153,14 @@ public class RestChatController {
                     && !responseGemini.getCandidates().isEmpty()
                     && !responseGemini.getCandidates().get(0).content.getParts()
                             .isEmpty()) {
-
+                // truong họp này vào đây là đã thành công
                 String dataResponse = responseGemini.getCandidates().get(0).content.getParts()
                         .get(0)
                         .getText();
                 listHistory.add(responseGemini.getCandidates().get(0).content);
                 return ResponseEntity.ok().body(responseGemini.getCandidates().get(0).content);
             } else {
+                // bắt lỗi api gemini
                 ErrorResponseHead responseHead = gson.fromJson(responseData.body(),
                         ErrorResponseHead.class);
                 ErrorResponseData error = responseHead.getError();
@@ -253,6 +255,7 @@ public class RestChatController {
 
     @GetMapping("resetHistory")
     public ResponseEntity<?> getMethodName() {
+        // xóa lịch sử trò chuyện
         listHistory = new ArrayList<>();
         return ResponseEntity.ok().body("succes");
     }
