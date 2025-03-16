@@ -432,11 +432,13 @@ public class ExportController {
                             HttpRequest request;
 
                             Gson gson = new Gson();
-                            List<Part> parts = Collections.singletonList(new Part(requestModel
-                                    + " và KHÔNG ĐƯỢC diễn giải lại yêu cầu, không trích dẫn đoạn văn yêu cầu, không thêm hoặc bớt các ký tự, tôi chỉ muốn nhận kết quả."
-                                    +
-                                    " Nếu đoạn văn yêu cầu dịch không có chữ thì trả kết quả như đoạn văn đã yêu cầu : "
-                                    + largetText.toString()));
+                            // List<Part> parts = Collections.singletonList(new Part(requestModel
+                            // + " và KHÔNG ĐƯỢC diễn giải lại yêu cầu, không trích dẫn đoạn văn yêu cầu,
+                            // không thêm hoặc bớt các ký tự, tôi chỉ muốn nhận kết quả."
+                            // +
+                            // " Nếu đoạn văn yêu cầu dịch không có chữ thì trả kết quả như đoạn văn đã yêu
+                            // cầu : "
+                            // + largetText.toString()));
 
                             // List<Part> parts = Collections.singletonList(new Part(requestModel
                             // // + " từ " + languageOptionSource.getText()
@@ -456,20 +458,15 @@ public class ExportController {
                             // "\n Làm ơn hãy nắm rõ mọi yêu cầu tôi đặt ra, đoạn văn cần dịch như sau: "
                             // + largetText.toString()));
 
-                            // List<Part> parts = Collections.singletonList(new Part(requestModel
-                            // // + " từ " + languageOptionSource.getText()
-                            // // + " sang "
-                            // // + languageOptionTarget.getText()
-                            // + " và KHÔNG ĐƯỢC diễn giải lại yêu cầu, không trích dẫn đoạn văn yêu cầu,
-                            // tôi chỉ muốn nhận kết quả. "
-                            // // + "\n 2. Giữ nguyên (không xóa không thêm) các kí tự sau: "
-                            // // + Constain.BREAK_PARAGRAPH
-                            // // + " và "
-                            // // + Constain.BREAK_RUN + " và " + Constain.DATA_EMPTY_REPLACLE
-                            // // + " vì nó rất quan trọng với tôi " +
-                            // + " Nếu đoạn văn yêu cầu dịch không có chữ thì trả kết quả như đoạn văn đã
-                            // yêu cầu:\n "
-                            // + largetText.toString()));
+                            List<Part> parts = Collections.singletonList(new Part(requestModel
+                                    + " và KHÔNG ĐƯỢC diễn giải lại yêu cầu, không trích dẫn đoạn văn yêu cầu, tôi chỉ muốn nhận kết quả. "
+                                    + "\n. Giữ nguyên (không xóa không thêm) các kí tự sau: "
+                                    + Constain.BREAK_PARAGRAPH
+                                    + " và "
+                                    + Constain.BREAK_RUN + " và " + Constain.DATA_EMPTY_REPLACLE
+                                    + " vì nó rất quan trọng với tôi "
+                                    + " Nếu đoạn văn yêu cầu dịch không có chữ thì trả kết quả như đoạn văn đã yêu cầu:\n "
+                                    + largetText.toString()));
 
                             // List<ContentText> contents = Collections.singletonList(new ContentText(parts,
                             // "user"));
